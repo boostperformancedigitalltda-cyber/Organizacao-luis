@@ -159,7 +159,7 @@ export default function MorningModal({ date, onComplete }) {
                       />
                       <button
                         onClick={() => removeBlock(block.uid)}
-                        className="text-slate-300 hover:text-rose-400 transition-colors text-xs"
+                        className="w-9 h-9 flex items-center justify-center text-slate-300 hover:text-rose-400 transition-colors rounded-lg hover:bg-rose-50 flex-shrink-0"
                       >
                         ✕
                       </button>
@@ -204,7 +204,7 @@ export default function MorningModal({ date, onComplete }) {
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-6 bg-white border-t border-slate-100">
+      <div className="px-6 pt-4 pb-6 bg-white border-t border-slate-100 safe-bottom">
         <div className="flex gap-3">
           {step > 1 && (
             <button

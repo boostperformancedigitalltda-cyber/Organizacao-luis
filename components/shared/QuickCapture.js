@@ -29,7 +29,8 @@ export default function QuickCapture({ inbox, setInbox }) {
       {/* FAB */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-30 w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl shadow-lg flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95"
+        className="fixed left-4 z-30 w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl shadow-lg flex items-center justify-center text-xl transition-all active:scale-90"
+        style={{ bottom: 'calc(var(--nav-height) + var(--safe-bottom) + 16px)' }}
         title="Captura rápida"
       >
         ⚡

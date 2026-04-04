@@ -40,7 +40,7 @@ function FocusTimer({ block, onDone, onCancel }) {
   const pct = running ? ((selectedMin * 60 - secondsLeft) / (selectedMin * 60)) * 100 : 0
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 z-40 px-4 max-w-lg mx-auto">
+    <div className="fixed left-0 right-0 z-40 px-4 max-w-lg mx-auto" style={{ bottom: 'calc(var(--nav-height) + var(--safe-bottom) + 8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl border border-indigo-100 p-4">
         <div className="flex items-center gap-3">
           <div className="relative w-14 h-14 flex-shrink-0">
@@ -240,7 +240,7 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNav
                   {!isDone && (
                     <button
                       onClick={() => setFocusBlock(isFocused ? null : block)}
-                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+                      className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${
                         isFocused ? 'bg-indigo-100 text-indigo-600' : 'text-slate-300 hover:text-indigo-400 hover:bg-indigo-50'
                       }`}
                       title="Iniciar timer de foco"
@@ -250,7 +250,7 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNav
                   )}
                   <button
                     onClick={() => setEditBlock(block)}
-                    className="text-slate-300 hover:text-slate-500 transition-colors flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-50"
+                    className="text-slate-300 hover:text-slate-500 transition-colors flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50"
                   >
                     ✏️
                   </button>
@@ -261,10 +261,11 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNav
         })}
       </div>
 
-      {/* FAB add block */}
+      {/* FAB add block — acima do nav + safe area */}
       <button
         onClick={() => setAddOpen(true)}
-        className="fixed bottom-20 right-4 w-12 h-12 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg flex items-center justify-center text-xl transition-all hover:scale-105 active:scale-95 z-30"
+        className="fixed right-4 w-14 h-14 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl shadow-lg flex items-center justify-center text-2xl transition-all active:scale-90 z-30"
+        style={{ bottom: 'calc(var(--nav-height) + var(--safe-bottom) + 16px)' }}
       >
         +
       </button>

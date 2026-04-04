@@ -205,7 +205,7 @@ function ProjetoModal({ initial, onSave, onClose }) {
             <div className="flex flex-wrap gap-2">
               {PROJETO_ICONS.map((ic) => (
                 <button key={ic} onClick={() => setIcon(ic)}
-                  className={`text-xl w-10 h-10 rounded-xl flex items-center justify-center transition-all ${icon === ic ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-110' : 'bg-slate-100'}`}>
+                  className={`text-xl w-11 h-11 rounded-xl flex items-center justify-center transition-all ${icon === ic ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-110' : 'bg-slate-100'}`}>
                   {ic}
                 </button>
               ))}
@@ -216,7 +216,7 @@ function ProjetoModal({ initial, onSave, onClose }) {
             <div className="flex gap-2 flex-wrap">
               {PROJETO_COLORS.map((c) => (
                 <button key={c} onClick={() => setColor(c)} style={{ background: c }}
-                  className={`w-8 h-8 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`} />
+                  className={`w-10 h-10 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`} />
               ))}
             </div>
           </div>

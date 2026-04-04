@@ -32,7 +32,7 @@ export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
               <button
                 key={ic}
                 onClick={() => update('icon', ic)}
-                className={`w-9 h-9 flex items-center justify-center rounded-xl text-lg transition-all ${
+                className={`w-11 h-11 flex items-center justify-center rounded-xl text-xl transition-all ${
                   block.icon === ic ? 'bg-indigo-100 ring-2 ring-indigo-400' : 'bg-slate-50 hover:bg-slate-100'
                 }`}
               >
@@ -84,7 +84,7 @@ export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
               <button
                 key={cat.id}
                 onClick={() => update('category', cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`px-3 py-2.5 rounded-xl text-sm font-semibold transition-all min-h-[44px] ${
                   block.category === cat.id
                     ? 'text-white shadow-sm'
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'

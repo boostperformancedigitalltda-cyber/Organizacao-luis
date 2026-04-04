@@ -182,7 +182,7 @@ export default function Home() {
       )}
 
       {/* Main content */}
-      <div className="max-w-lg mx-auto px-4 pt-6 pb-28">
+      <div className="max-w-lg mx-auto px-4 pt-5 content-pb">
         {tab === 'hoje' && plan && (
           <>
             <ComandoCentral onNavigate={setTab} />

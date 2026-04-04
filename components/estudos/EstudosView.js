@@ -141,7 +141,7 @@ function MateriaModal({ initial, onSave, onClose }) {
                 <button
                   key={ic}
                   onClick={() => setIcon(ic)}
-                  className={`text-xl w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  className={`text-xl w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
                     icon === ic ? 'bg-indigo-100 ring-2 ring-indigo-500 scale-110' : 'bg-slate-100 hover:bg-slate-200'
                   }`}
                 >
@@ -159,7 +159,7 @@ function MateriaModal({ initial, onSave, onClose }) {
                   key={c}
                   onClick={() => setColor(c)}
                   style={{ background: c }}
-                  className={`w-8 h-8 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`}
+                  className={`w-10 h-10 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`}
                 />
               ))}
             </div>
