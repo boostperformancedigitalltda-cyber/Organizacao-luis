@@ -22,6 +22,7 @@ import { loadDayPlan, saveDayPlan } from '@/lib/planner'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
 import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
+import { loadNotifSettings, scheduleAll, getPermission } from '@/lib/notifications'
 
 // Inbox view (processar itens capturados)
 import { getPendingInbox, removeFromInbox, markProcessed, CAPTURE_TYPES } from '@/lib/quickcapture'
@@ -120,6 +121,10 @@ export default function Home() {
     // Auto-prompt weekly review on Sunday/Monday if not done
     if (shouldShowReviewPrompt(rev)) {
       setTimeout(() => setShowReview(true), 1500)
+    }
+    // Re-schedule notifications if already permitted
+    if (typeof window !== 'undefined' && getPermission() === 'granted') {
+      scheduleAll(loadNotifSettings())
     }
     setLoaded(true)
   }, []) // eslint-disable-line
