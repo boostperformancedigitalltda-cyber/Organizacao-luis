@@ -4,12 +4,9 @@ import { useState, useEffect } from 'react'
 import BottomNav from '@/components/ui/BottomNav'
 import MorningModal from '@/components/hoje/MorningModal'
 import DayTimeline from '@/components/hoje/DayTimeline'
-import ComandoCentral from '@/components/hoje/ComandoCentral'
 import WeekPlanner from '@/components/semana/WeekPlanner'
-import MonthView from '@/components/mes/MonthView'
 import GoalsView from '@/components/metas/GoalsView'
 import FinanceTab from '@/components/finance/FinanceTab'
-import RoutineEditor from '@/components/rotina/RoutineEditor'
 import EstudosView from '@/components/estudos/EstudosView'
 import TreinoView from '@/components/treino/TreinoView'
 import ProjetosView from '@/components/projetos/ProjetosView'
@@ -23,6 +20,7 @@ import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
 import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
 import { loadNotifSettings, scheduleAll, getPermission } from '@/lib/notifications'
+import { loadTasks, loadProjetos } from '@/lib/projetos'
 
 // Inbox view (processar itens capturados)
 import { getPendingInbox, removeFromInbox, markProcessed, CAPTURE_TYPES } from '@/lib/quickcapture'
@@ -98,11 +96,14 @@ export default function Home() {
   const [tab, setTab] = useState('hoje')
   const [today] = useState(new Date())
   const [plan, setPlan] = useState(null)
+  const [prevPlan, setPrevPlan] = useState(null)
   const [loaded, setLoaded] = useState(false)
   const [inbox, setInbox] = useState([])
   const [reviews, setReviews] = useState([])
   const [showReview, setShowReview] = useState(false)
   const [showMais, setShowMais] = useState(false)
+  const [pendingTasks, setPendingTasks] = useState([])
+  const [projetos, setProjetos] = useState([])
 
   function handleTabChange(id) {
     if (id === 'mais') { setShowMais(true); return }
@@ -115,14 +116,24 @@ export default function Home() {
   useEffect(() => {
     const savedPlan = loadDayPlan(dk)
     setPlan(savedPlan)
+
+    // Load yesterday's plan for morning summary
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    setPrevPlan(loadDayPlan(dateKey(yesterday)))
+
+    // Load project tasks for morning suggestions
+    const allTasks = loadTasks()
+    const allProjetos = loadProjetos()
+    setPendingTasks(allTasks.filter((t) => t.status !== 'feito'))
+    setProjetos(allProjetos.filter((p) => p.status === 'ativo'))
+
     setInbox(loadInbox())
     const rev = loadReviews()
     setReviews(rev)
-    // Auto-prompt weekly review on Sunday/Monday if not done
     if (shouldShowReviewPrompt(rev)) {
       setTimeout(() => setShowReview(true), 1500)
     }
-    // Re-schedule notifications if already permitted
     if (typeof window !== 'undefined' && getPermission() === 'granted') {
       scheduleAll(loadNotifSettings())
     }
@@ -183,7 +194,13 @@ export default function Home() {
     <main className="min-h-screen bg-slate-50">
       {/* Morning planning wizard */}
       {tab === 'hoje' && !plan && (
-        <MorningModal date={today} onComplete={handleMorningComplete} />
+        <MorningModal
+          date={today}
+          onComplete={handleMorningComplete}
+          prevPlan={prevPlan}
+          pendingTasks={pendingTasks}
+          projetos={projetos}
+        />
       )}
 
       {/* Weekly Review Modal */}
@@ -214,9 +231,7 @@ export default function Home() {
         {tab === 'habitos'  && <HabitsView />}
         {tab === 'metas'    && <GoalsView />}
         {tab === 'semana'   && <WeekPlanner />}
-        {tab === 'mes'      && <MonthView />}
         {tab === 'inbox'    && <InboxView inbox={inbox} setInbox={setInbox} />}
-        {tab === 'rotina'   && <RoutineEditor />}
       </div>
 
       {/* Review button */}

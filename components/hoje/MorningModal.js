@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { getTemplateBlocks, BLOCK_CATEGORIES } from '@/lib/planner'
+import { PRIORITY_LABELS } from '@/lib/projetos'
 
 const ENERGY_OPTIONS = [
   { value: 1, emoji: '😴', label: 'Cansado' },
@@ -11,7 +12,7 @@ const ENERGY_OPTIONS = [
   { value: 5, emoji: '🔥', label: 'Focado' },
 ]
 
-export default function MorningModal({ date, onComplete }) {
+export default function MorningModal({ date, onComplete, prevPlan, pendingTasks = [], projetos = [] }) {
   const [step, setStep] = useState(1)
   const [energy, setEnergy] = useState(3)
   const [priorities, setPriorities] = useState(['', '', ''])
@@ -19,6 +20,11 @@ export default function MorningModal({ date, onComplete }) {
 
   const dayName = date.toLocaleDateString('pt-BR', { weekday: 'long' })
   const dateStr = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+
+  // Yesterday's stats
+  const totalYesterday = prevPlan?.blocks?.length || 0
+  const doneYesterday = prevPlan?.blocks?.filter((b) => prevPlan.completed?.[b.uid]).length || 0
+  const pctYesterday = totalYesterday ? Math.round((doneYesterday / totalYesterday) * 100) : null
 
   const updatePriority = (i, val) => {
     const p = [...priorities]
@@ -52,7 +58,18 @@ export default function MorningModal({ date, onComplete }) {
     onComplete({ energy, priorities, blocks })
   }
 
-  
+  // Task suggestions: high priority first, then by dueDate
+  const today = date.toISOString().slice(0, 10)
+  const suggestions = pendingTasks
+    .filter((t) => t.status !== 'feito')
+    .sort((a, b) => {
+      const order = { alta: 0, media: 1, baixa: 2 }
+      const aOverdue = a.dueDate && a.dueDate <= today ? -1 : 0
+      const bOverdue = b.dueDate && b.dueDate <= today ? -1 : 0
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue
+      return (order[a.priority] || 1) - (order[b.priority] || 1)
+    })
+    .slice(0, 4)
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-b from-indigo-50 to-white flex flex-col">
@@ -69,14 +86,40 @@ export default function MorningModal({ date, onComplete }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6">
-        {/* Step 1: Greeting + Energy */}
+        {/* Step 1: Greeting + Energy + Yesterday summary */}
         {step === 1 && (
           <div className="animate-fade-in">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <div className="text-5xl mb-4">☀️</div>
               <h1 className="text-2xl font-bold text-slate-900">Bom dia, Luis 👋</h1>
               <p className="text-slate-500 mt-1 capitalize">{dayName}, {dateStr}</p>
             </div>
+
+            {/* Yesterday summary */}
+            {pctYesterday !== null && (
+              <div className={`rounded-2xl p-4 mb-4 flex items-center gap-4 ${
+                pctYesterday >= 80 ? 'bg-emerald-50 border border-emerald-100' :
+                pctYesterday >= 50 ? 'bg-amber-50 border border-amber-100' :
+                'bg-slate-50 border border-slate-100'
+              }`}>
+                <div className={`text-3xl w-12 h-12 flex items-center justify-center rounded-xl ${
+                  pctYesterday >= 80 ? 'bg-emerald-100' : pctYesterday >= 50 ? 'bg-amber-100' : 'bg-slate-100'
+                }`}>
+                  {pctYesterday >= 80 ? '🏆' : pctYesterday >= 50 ? '💪' : '😤'}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Ontem</p>
+                  <p className={`text-sm font-bold mt-0.5 ${
+                    pctYesterday >= 80 ? 'text-emerald-700' : pctYesterday >= 50 ? 'text-amber-700' : 'text-slate-600'
+                  }`}>
+                    {doneYesterday}/{totalYesterday} blocos · {pctYesterday}%
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {pctYesterday >= 80 ? 'Excelente execução!' : pctYesterday >= 50 ? 'Bom progresso.' : 'Hoje é uma nova chance.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
               <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
@@ -104,7 +147,7 @@ export default function MorningModal({ date, onComplete }) {
           </div>
         )}
 
-        {/* Step 2: Priorities */}
+        {/* Step 2: Priorities + task suggestions */}
         {step === 2 && (
           <div className="animate-fade-in">
             <div className="mb-6">
@@ -112,7 +155,7 @@ export default function MorningModal({ date, onComplete }) {
               <p className="text-slate-500 text-sm mt-1">Quais são suas 3 prioridades hoje?</p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 mb-5">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3">
@@ -132,6 +175,45 @@ export default function MorningModal({ date, onComplete }) {
                 </div>
               ))}
             </div>
+
+            {/* Project task suggestions */}
+            {suggestions.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                  Tarefas pendentes em Projetos
+                </p>
+                <div className="space-y-2">
+                  {suggestions.map((task) => {
+                    const proj = projetos.find((p) => p.id === task.projetoId)
+                    const prio = PRIORITY_LABELS[task.priority]
+                    const isOverdue = task.dueDate && task.dueDate <= today
+                    const emptySlot = priorities.findIndex((p) => !p.trim())
+                    return (
+                      <button
+                        key={task.id}
+                        onClick={() => { if (emptySlot !== -1) updatePriority(emptySlot, task.title) }}
+                        disabled={emptySlot === -1 || priorities.includes(task.title)}
+                        className="w-full flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 border border-slate-100 shadow-sm active:bg-slate-50 disabled:opacity-40 text-left"
+                      >
+                        <span className="text-base">{proj?.icon || '🚀'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-slate-700 font-medium truncate">{task.title}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{proj?.name || 'Projeto'}</p>
+                        </div>
+                        {isOverdue && (
+                          <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full flex-shrink-0">vencida</span>
+                        )}
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${prio?.color} ${prio?.bg}`}>
+                          {prio?.label}
+                        </span>
+                        <span className="text-slate-300 text-xs flex-shrink-0">+</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-300 mt-2 text-center">Toque para adicionar como prioridade</p>
+              </div>
+            )}
           </div>
         )}
 

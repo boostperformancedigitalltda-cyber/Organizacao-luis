@@ -4,12 +4,10 @@ import { useState } from 'react'
 import NotificationSettings from '@/components/shared/NotificationSettings'
 
 const ITEMS = [
-  { id: 'habitos',  label: 'Hábitos',  icon: '🌱', color: 'bg-emerald-50 text-emerald-600' },
-  { id: 'metas',    label: 'Metas',    icon: '🎯', color: 'bg-indigo-50  text-indigo-600'  },
-  { id: 'semana',   label: 'Semana',   icon: '📆', color: 'bg-violet-50  text-violet-600'  },
-  { id: 'mes',      label: 'Mês',      icon: '🗓️', color: 'bg-blue-50    text-blue-600'    },
-  { id: 'inbox',    label: 'Inbox',    icon: '⚡', color: 'bg-amber-50   text-amber-600'   },
-  { id: 'rotina',   label: 'Rotina',   icon: '⚙️', color: 'bg-slate-100  text-slate-600'   },
+  { id: 'habitos', label: 'Hábitos', icon: '🌱', color: 'bg-emerald-50 text-emerald-600' },
+  { id: 'metas',   label: 'Metas',   icon: '🎯', color: 'bg-indigo-50  text-indigo-600'  },
+  { id: 'semana',  label: 'Semana',  icon: '📆', color: 'bg-violet-50  text-violet-600'  },
+  { id: 'inbox',   label: 'Inbox',   icon: '⚡', color: 'bg-amber-50   text-amber-600'   },
 ]
 
 export default function MaisMenu({ onNavigate, onClose, pendingInbox = 0 }) {
