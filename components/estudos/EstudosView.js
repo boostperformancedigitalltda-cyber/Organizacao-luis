@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   loadMaterias, saveMaterias, addMateria, updateMateria, removeMateria,
-  addTopic, toggleTopic, removeTopic,
+  addTopic, toggleTopic, removeTopic, setTopicReview, getTopicsForReviewToday,
   loadStudyBlocks, getBlocksForDate, addStudyBlock, toggleStudyBlock,
   removeStudyBlock, updateStudyBlock, getWeeklyStats, formatMin,
   DEFAULT_ICONS,
@@ -415,31 +415,54 @@ function MateriasTab({ materias, setMaterias, blocks, setBlocks }) {
               {isOpen && (
                 <div className="border-t border-slate-100 px-4 py-3">
                   <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Tópicos / conteúdos</p>
-                  <div className="space-y-1.5 mb-3">
+                  <div className="space-y-2 mb-3">
                     {(m.topics || []).length === 0 && (
                       <p className="text-xs text-slate-400 italic">Nenhum tópico ainda.</p>
                     )}
-                    {(m.topics || []).map((t) => (
-                      <div key={t.id} className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleTopic(m.id, t.id)}
-                          className={`w-5 h-5 rounded flex-shrink-0 border flex items-center justify-center text-xs transition-all ${
-                            t.status === 'feito'
-                              ? 'bg-emerald-500 border-emerald-500 text-white'
-                              : 'border-slate-300'
-                          }`}
-                        >
-                          {t.status === 'feito' && '✓'}
-                        </button>
-                        <span className={`text-sm flex-1 ${t.status === 'feito' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-                          {t.title}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveTopic(m.id, t.id)}
-                          className="text-slate-300 hover:text-red-400 text-xs"
-                        >✕</button>
+                    {(m.topics || []).map((t) => {
+                      const today = new Date().toISOString().slice(0, 10)
+                      const reviewDue = t.reviewDate && t.reviewDate <= today
+                      return (
+                      <div key={t.id}>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleTopic(m.id, t.id)}
+                            className={`w-6 h-6 rounded flex-shrink-0 border-2 flex items-center justify-center text-xs transition-all ${
+                              t.status === 'feito'
+                                ? 'bg-emerald-500 border-emerald-500 text-white'
+                                : 'border-slate-300'
+                            }`}
+                          >
+                            {t.status === 'feito' && '✓'}
+                          </button>
+                          <span className={`text-sm flex-1 ${t.status === 'feito' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                            {t.title}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveTopic(m.id, t.id)}
+                            className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-400"
+                          >✕</button>
+                        </div>
+                        {/* Revisão espaçada */}
+                        <div className="flex items-center gap-1.5 mt-1 ml-8">
+                          {t.reviewDate ? (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${reviewDue ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-500'}`}>
+                              🔁 {reviewDue ? 'Revisar hoje!' : `Revisar em ${t.reviewDate}`}
+                            </span>
+                          ) : t.status !== 'feito' ? (
+                            <div className="flex gap-1">
+                              {[3, 7, 14].map((d) => (
+                                <button key={d}
+                                  onClick={() => setMaterias(setTopicReview(materias, m.id, t.id, d))}
+                                  className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500 transition-all">
+                                  +{d}d
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                   <div className="flex gap-2">
                     <input

@@ -16,6 +16,8 @@ import ProjetosView from '@/components/projetos/ProjetosView'
 import QuickCapture from '@/components/shared/QuickCapture'
 import WeeklyReview from '@/components/weeklyreview/WeeklyReview'
 import AuthWrapper from '@/components/auth/AuthWrapper'
+import MaisMenu from '@/components/ui/MaisMenu'
+import HabitsView from '@/components/habitos/HabitsView'
 import { loadDayPlan, saveDayPlan } from '@/lib/planner'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
@@ -99,6 +101,13 @@ export default function Home() {
   const [inbox, setInbox] = useState([])
   const [reviews, setReviews] = useState([])
   const [showReview, setShowReview] = useState(false)
+  const [showMais, setShowMais] = useState(false)
+
+  function handleTabChange(id) {
+    if (id === 'mais') { setShowMais(true); return }
+    setShowMais(false)
+    setTab(id)
+  }
 
   const dk = dateKey(today)
 
@@ -184,32 +193,31 @@ export default function Home() {
       {/* Main content */}
       <div className="max-w-lg mx-auto px-4 pt-5 content-pb">
         {tab === 'hoje' && plan && (
-          <>
-            <ComandoCentral onNavigate={setTab} />
-            <DayTimeline
-              plan={plan}
-              onToggle={handleToggle}
-              onAddBlock={handleAddBlock}
-              onReset={handleReset}
-              onNavigate={setTab}
-            />
-          </>
+          <DayTimeline
+            plan={plan}
+            onToggle={handleToggle}
+            onAddBlock={handleAddBlock}
+            onReset={handleReset}
+            onNavigate={handleTabChange}
+          />
         )}
-        {tab === 'semana'   && <WeekPlanner />}
-        {tab === 'mes'      && <MonthView />}
-        {tab === 'metas'    && <GoalsView />}
         {tab === 'estudos'  && <EstudosView />}
         {tab === 'treino'   && <TreinoView />}
         {tab === 'projetos' && <ProjetosView />}
         {tab === 'financas' && <FinanceTab />}
-        {tab === 'rotina'   && <RoutineEditor />}
+        {/* Secondary (via Mais) */}
+        {tab === 'habitos'  && <HabitsView />}
+        {tab === 'metas'    && <GoalsView />}
+        {tab === 'semana'   && <WeekPlanner />}
+        {tab === 'mes'      && <MonthView />}
         {tab === 'inbox'    && <InboxView inbox={inbox} setInbox={setInbox} />}
+        {tab === 'rotina'   && <RoutineEditor />}
       </div>
 
-      {/* Weekly Review trigger button */}
+      {/* Review button */}
       <button
         onClick={() => setShowReview(true)}
-        className="fixed top-4 right-4 z-30 bg-white border border-slate-200 shadow-sm rounded-xl px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-1.5"
+        className="fixed top-4 right-4 z-30 bg-white border border-slate-200 shadow-sm rounded-xl px-3 py-1.5 text-xs font-bold text-slate-600 active:bg-slate-50 transition-all flex items-center gap-1.5"
       >
         📋 Review
       </button>
@@ -217,7 +225,16 @@ export default function Home() {
       {/* Quick Capture FAB */}
       <QuickCapture inbox={inbox} setInbox={setInbox} />
 
-      <BottomNav active={tab} onChange={setTab} pendingInbox={pendingInbox} />
+      {/* Mais Menu */}
+      {showMais && (
+        <MaisMenu
+          onNavigate={(id) => { setTab(id); setShowMais(false) }}
+          onClose={() => setShowMais(false)}
+          pendingInbox={pendingInbox}
+        />
+      )}
+
+      <BottomNav active={tab} onChange={handleTabChange} pendingInbox={pendingInbox} />
     </main>
     </AuthWrapper>
   )
