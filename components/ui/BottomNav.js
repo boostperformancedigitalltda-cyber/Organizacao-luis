@@ -25,7 +25,7 @@ export default function BottomNav({ active, onChange, pendingInbox = 0 }) {
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={`relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all active:scale-90 min-h-[56px] ${
+              className={`relative flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all active:scale-90 min-h-[64px] touch-none ${
                 isActive ? 'text-indigo-600' : 'text-slate-400'
               }`}
             >
