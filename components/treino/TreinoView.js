@@ -181,6 +181,13 @@ function PlanoCard({ plano, isToday, onUpdate, onRemove, onAddEx, onUpdateEx, on
               + Exercício
             </button>
           )}
+
+          <button
+            onClick={() => { if (confirm(`Excluir o dia "${plano.name}"?`)) onRemove() }}
+            className="w-full text-red-400 text-xs font-semibold py-2 rounded-xl hover:bg-red-50 transition-colors mt-1"
+          >
+            🗑️ Excluir este dia de treino
+          </button>
         </div>
       )}
     </div>
