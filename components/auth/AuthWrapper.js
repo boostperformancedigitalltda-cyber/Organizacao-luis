@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { onAuth, signInWithGoogle, logout, fsGetAll, initSync } from '@/lib/firebase'
-import { set } from '@/lib/storage'
+import { onAuth, signInWithGoogle, logout, fsGetAll, initSync, KEY_MAP, fsSetDirect } from '@/lib/firebase'
+import { get, set } from '@/lib/storage'
 
 export default function AuthWrapper({ children }) {
   const [user, setUser] = useState(null)
@@ -15,14 +15,29 @@ export default function AuthWrapper({ children }) {
       if (u) {
         setSyncing(true)
         try {
-          // Pull all Firestore data into localStorage
-          const data = await fsGetAll(u.uid)
-          Object.entries(data).forEach(([key, value]) => {
+          // 1. Pull all Firestore data
+          const fsData = await fsGetAll(u.uid)
+
+          // 2. Firestore wins — write into localStorage
+          Object.entries(fsData).forEach(([key, value]) => {
             if (value !== null && value !== undefined) {
               set(key, value)
             }
           })
-          // Enable ongoing sync for future writes
+
+          // 3. Upload local data missing in Firestore (entered before login or on another device)
+          const uploadPromises = []
+          for (const lsKey of Object.keys(KEY_MAP)) {
+            if (!(lsKey in fsData)) {
+              const localValue = get(lsKey, null)
+              if (localValue !== null && localValue !== undefined) {
+                uploadPromises.push(fsSetDirect(u.uid, lsKey, localValue))
+              }
+            }
+          }
+          if (uploadPromises.length > 0) await Promise.allSettled(uploadPromises)
+
+          // 4. Enable ongoing sync for future writes
           initSync(u.uid)
         } catch (e) {
           console.error('Sync error:', e)
