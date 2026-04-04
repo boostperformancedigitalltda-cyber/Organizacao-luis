@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  loadPlanos, addPlano, updatePlano, removePlano,
+  loadPlanos, addPlano, updatePlano, removePlano, duplicatePlano,
   addExercise, updateExercise, removeExercise,
   loadLogs, addLog,
   getTodayPlano, DAY_NAMES, DAY_SHORT,
@@ -109,10 +109,11 @@ function ExerciseRow({ ex, onUpdate, onRemove, sessionMode, checked, onCheck, se
 }
 
 // ── Plano Card ────────────────────────────────────────────────────────────────
-function PlanoCard({ plano, isToday, onUpdate, onRemove, onAddEx, onUpdateEx, onRemoveEx, onStartSession }) {
+function PlanoCard({ plano, isToday, existingDays, onUpdate, onRemove, onDuplicate, onAddEx, onUpdateEx, onRemoveEx, onStartSession }) {
   const [open, setOpen] = useState(isToday)
   const [addingEx, setAddingEx] = useState(false)
   const [newEx, setNewEx] = useState({ name: '', sets: 3, reps: '10-12', weight: '', rest: '60s' })
+  const [duplicateTo, setDuplicateTo] = useState(null)
 
   return (
     <div className={`bg-white rounded-2xl shadow-card overflow-hidden ${isToday ? 'ring-2 ring-indigo-300' : ''}`}>
@@ -182,12 +183,55 @@ function PlanoCard({ plano, isToday, onUpdate, onRemove, onAddEx, onUpdateEx, on
             </button>
           )}
 
-          <button
-            onClick={() => { if (confirm(`Excluir o dia "${plano.name}"?`)) onRemove() }}
-            className="w-full text-red-400 text-xs font-semibold py-2 rounded-xl hover:bg-red-50 transition-colors mt-1"
-          >
-            🗑️ Excluir este dia de treino
-          </button>
+          <div className="flex gap-2 mt-1">
+            <button
+              onClick={() => setDuplicateTo(plano.dayOfWeek)}
+              className="flex-1 text-indigo-400 text-xs font-semibold py-2 rounded-xl hover:bg-indigo-50 transition-colors"
+            >
+              📋 Duplicar para outro dia
+            </button>
+            <button
+              onClick={() => { if (confirm(`Excluir o dia "${plano.name}"?`)) onRemove() }}
+              className="flex-1 text-red-400 text-xs font-semibold py-2 rounded-xl hover:bg-red-50 transition-colors"
+            >
+              🗑️ Excluir dia
+            </button>
+          </div>
+
+          {duplicateTo !== null && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 mt-1 space-y-2">
+              <p className="text-xs font-bold text-indigo-700">Duplicar para qual dia?</p>
+              <div className="flex gap-1 flex-wrap">
+                {DAY_SHORT.map((d, i) => {
+                  const taken = existingDays.includes(i) && i !== plano.dayOfWeek
+                  return (
+                    <button
+                      key={i}
+                      disabled={taken || i === plano.dayOfWeek}
+                      onClick={() => setDuplicateTo(i)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
+                        duplicateTo === i ? 'bg-indigo-600 text-white' : 'bg-white border border-indigo-200 text-indigo-600'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { onDuplicate(duplicateTo); setDuplicateTo(null) }}
+                  disabled={duplicateTo === plano.dayOfWeek}
+                  className="flex-1 bg-indigo-600 text-white py-2 rounded-xl text-xs font-bold disabled:opacity-40"
+                >
+                  Duplicar
+                </button>
+                <button onClick={() => setDuplicateTo(null)} className="px-4 bg-white border border-slate-200 text-slate-500 py-2 rounded-xl text-xs font-bold">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -353,6 +397,10 @@ export default function TreinoView() {
     setPlanos(removeExercise(planos, planoId, exId))
   }
 
+  function handleDuplicate(planoId, targetDay) {
+    setPlanos(duplicatePlano(planos, planoId, targetDay))
+  }
+
   function handleFinishSession(duration) {
     if (!activeSession) return
     const newLogs = addLog(logs, {
@@ -416,8 +464,10 @@ export default function TreinoView() {
               key={p.id}
               plano={p}
               isToday={todayPlano?.id === p.id}
+              existingDays={existingDays}
               onUpdate={(d) => setPlanos(updatePlano(planos, p.id, d))}
               onRemove={() => setPlanos(removePlano(planos, p.id))}
+              onDuplicate={(targetDay) => handleDuplicate(p.id, targetDay)}
               onAddEx={(d) => handleAddEx(p.id, d)}
               onUpdateEx={(exId, d) => handleUpdateEx(p.id, exId, d)}
               onRemoveEx={(exId) => handleRemoveEx(p.id, exId)}
