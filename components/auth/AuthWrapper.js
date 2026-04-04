@@ -132,14 +132,13 @@ export default function AuthWrapper({ children }) {
   return (
     <>
       {children}
-      {/* User info + logout (top left, subtle) */}
+      {/* User avatar + logout */}
       <div className="fixed top-4 left-4 z-30 flex items-center gap-2">
         {user.photoURL && (
-          <img
-            src={user.photoURL}
-            alt={user.displayName}
-            className="w-7 h-7 rounded-full border-2 border-white shadow"
-          />
+          <button onClick={() => { if (confirm('Sair da conta?')) logout() }} className="flex items-center gap-1.5 bg-white/90 border border-slate-200 shadow-sm rounded-xl px-2 py-1 active:bg-slate-50">
+            <img src={user.photoURL} alt={user.displayName} className="w-6 h-6 rounded-full" />
+            <span className="text-[10px] font-bold text-slate-400">Sair</span>
+          </button>
         )}
       </div>
     </>
