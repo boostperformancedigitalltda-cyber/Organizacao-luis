@@ -198,7 +198,7 @@ function TreinoCard({ plano, logs, onNavigate }) {
 }
 
 // ── Main DayTimeline ──────────────────────────────────────────────────────────
-export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNavigate }) {
+export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNavigate, onPlanTomorrow, hasTomorrowPlan }) {
   const { date, energy, priorities, blocks, completed } = plan
   const [now, setNow] = useState(new Date())
   const [addOpen, setAddOpen] = useState(false)
@@ -413,9 +413,16 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNav
         +
       </button>
 
-      <button onClick={onReset} className="mt-6 text-xs text-slate-400 hover:text-slate-600 underline-offset-2 hover:underline block mx-auto">
-        Replanejar dia
-      </button>
+      <div className="mt-6 flex items-center justify-center gap-4">
+        <button onClick={onReset} className="text-xs text-slate-400 hover:text-slate-600 underline-offset-2 hover:underline">
+          Replanejar dia
+        </button>
+        {onPlanTomorrow && (
+          <button onClick={onPlanTomorrow} className={`text-xs underline-offset-2 hover:underline ${hasTomorrowPlan ? 'text-indigo-400 hover:text-indigo-600' : 'text-indigo-500 hover:text-indigo-700 font-semibold'}`}>
+            {hasTomorrowPlan ? '✓ Amanhã planejado' : '🌙 Planejar amanhã'}
+          </button>
+        )}
+      </div>
 
       {/* Focus Timer */}
       {focusBlock && (

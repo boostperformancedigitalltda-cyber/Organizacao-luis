@@ -95,8 +95,11 @@ function InboxView({ inbox, setInbox }) {
 export default function Home() {
   const [tab, setTab] = useState('hoje')
   const [today] = useState(new Date())
+  const [tomorrow] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d })
   const [plan, setPlan] = useState(null)
   const [prevPlan, setPrevPlan] = useState(null)
+  const [tomorrowPlan, setTomorrowPlan] = useState(null)
+  const [showPlanTomorrow, setShowPlanTomorrow] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [inbox, setInbox] = useState([])
   const [reviews, setReviews] = useState([])
@@ -116,6 +119,7 @@ export default function Home() {
   useEffect(() => {
     const savedPlan = loadDayPlan(dk)
     setPlan(savedPlan)
+    setTomorrowPlan(loadDayPlan(dateKey(tomorrow)))
 
     // Load yesterday's plan for morning summary
     const yesterday = new Date(today)
@@ -179,6 +183,20 @@ export default function Home() {
     saveDayPlan(dk, null)
   }
 
+  const handleTomorrowComplete = ({ energy, priorities, blocks }) => {
+    const newPlan = {
+      date: tomorrow.toISOString(),
+      energy,
+      priorities,
+      blocks,
+      completed: {},
+      planned: true,
+    }
+    setTomorrowPlan(newPlan)
+    saveDayPlan(dateKey(tomorrow), newPlan)
+    setShowPlanTomorrow(false)
+  }
+
   if (!loaded) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -203,6 +221,19 @@ export default function Home() {
         />
       )}
 
+      {/* Plan tomorrow modal */}
+      {showPlanTomorrow && (
+        <MorningModal
+          date={tomorrow}
+          onComplete={handleTomorrowComplete}
+          onCancel={() => setShowPlanTomorrow(false)}
+          prevPlan={plan}
+          pendingTasks={pendingTasks}
+          projetos={projetos}
+          isTomorrow
+        />
+      )}
+
       {/* Weekly Review Modal */}
       {showReview && (
         <WeeklyReview
@@ -221,6 +252,8 @@ export default function Home() {
             onAddBlock={handleAddBlock}
             onReset={handleReset}
             onNavigate={handleTabChange}
+            onPlanTomorrow={() => setShowPlanTomorrow(true)}
+            hasTomorrowPlan={!!tomorrowPlan}
           />
         )}
         {tab === 'estudos'  && <EstudosView />}

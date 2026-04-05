@@ -12,7 +12,7 @@ const ENERGY_OPTIONS = [
   { value: 5, emoji: '🔥', label: 'Focado' },
 ]
 
-export default function MorningModal({ date, onComplete, prevPlan, pendingTasks = [], projetos = [] }) {
+export default function MorningModal({ date, onComplete, onCancel, prevPlan, pendingTasks = [], projetos = [], isTomorrow = false }) {
   const [step, setStep] = useState(1)
   const [energy, setEnergy] = useState(3)
   const [priorities, setPriorities] = useState(['', '', ''])
@@ -90,8 +90,8 @@ export default function MorningModal({ date, onComplete, prevPlan, pendingTasks 
         {step === 1 && (
           <div className="animate-fade-in">
             <div className="text-center mb-6">
-              <div className="text-5xl mb-4">☀️</div>
-              <h1 className="text-2xl font-bold text-slate-900">Bom dia, Luis 👋</h1>
+              <div className="text-5xl mb-4">{isTomorrow ? '🌙' : '☀️'}</div>
+              <h1 className="text-2xl font-bold text-slate-900">{isTomorrow ? 'Planejar amanhã 🗓️' : 'Bom dia, Luis 👋'}</h1>
               <p className="text-slate-500 mt-1 capitalize">{dayName}, {dateStr}</p>
             </div>
 
@@ -123,7 +123,7 @@ export default function MorningModal({ date, onComplete, prevPlan, pendingTasks 
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
               <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
-                Como você está hoje?
+                {isTomorrow ? 'Como pretende estar amanhã?' : 'Como você está hoje?'}
               </p>
               <div className="flex justify-between gap-2">
                 {ENERGY_OPTIONS.map((opt) => (
@@ -152,7 +152,7 @@ export default function MorningModal({ date, onComplete, prevPlan, pendingTasks 
           <div className="animate-fade-in">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-slate-900">Top 3 do dia</h2>
-              <p className="text-slate-500 text-sm mt-1">Quais são suas 3 prioridades hoje?</p>
+              <p className="text-slate-500 text-sm mt-1">{isTomorrow ? 'Quais são suas 3 prioridades amanhã?' : 'Quais são suas 3 prioridades hoje?'}</p>
             </div>
 
             <div className="space-y-3 mb-5">
@@ -288,14 +288,21 @@ export default function MorningModal({ date, onComplete, prevPlan, pendingTasks 
       {/* Footer */}
       <div className="px-6 pt-4 pb-6 bg-white border-t border-slate-100 safe-bottom">
         <div className="flex gap-3">
-          {step > 1 && (
+          {step === 1 && isTomorrow && onCancel ? (
+            <button
+              onClick={onCancel}
+              className="px-5 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+          ) : step > 1 ? (
             <button
               onClick={() => setStep(step - 1)}
               className="px-5 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
             >
               Voltar
             </button>
-          )}
+          ) : null}
           {step < 3 ? (
             <button
               onClick={() => setStep(step + 1)}
@@ -308,7 +315,7 @@ export default function MorningModal({ date, onComplete, prevPlan, pendingTasks 
               onClick={handleFinish}
               className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl transition-colors shadow-sm"
             >
-              Começar o dia →
+              {isTomorrow ? 'Salvar plano →' : 'Começar o dia →'}
             </button>
           )}
         </div>
