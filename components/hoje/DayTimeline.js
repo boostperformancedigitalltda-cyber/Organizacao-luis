@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useAuth } from '@/components/auth/AuthWrapper'
 import { getCatInfo, calcProgress, getCurrentBlock, getNextBlock, blockDuration } from '@/lib/planner'
 import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock, formatMin } from '@/lib/estudos'
 import { loadMaterias } from '@/lib/estudos'
@@ -199,6 +200,7 @@ function TreinoCard({ plano, logs, onNavigate }) {
 
 // ── Main DayTimeline ──────────────────────────────────────────────────────────
 export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock, onReset, onNavigate, onPlanTomorrow, hasTomorrowPlan }) {
+  const auth = useAuth()
   const { date, energy, priorities, blocks, completed } = plan
   const [now, setNow] = useState(new Date())
   const [addOpen, setAddOpen] = useState(false)
@@ -267,11 +269,11 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-0.5">{dateStr}</p>
             <h1 className="text-3xl font-black text-slate-900 capitalize leading-tight">{dayName}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="w-10 h-10 rounded-2xl bg-white shadow-card flex items-center justify-center text-xl">
               {ENERGY_EMOJI[energy] || '🙂'}
             </div>
@@ -279,6 +281,14 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
               <div className="bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl px-2.5 py-1.5 shadow-sm">
                 <span className="text-xs font-black text-white">🔥 {plan.streak}</span>
               </div>
+            )}
+            {auth?.user?.photoURL && (
+              <button
+                onClick={() => { if (confirm('Sair da conta?')) auth.logout() }}
+                className="w-10 h-10 rounded-2xl overflow-hidden shadow-card border-2 border-white"
+              >
+                <img src={auth.user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+              </button>
             )}
           </div>
         </div>
@@ -357,7 +367,7 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
                 }`}
               >
                 {/* Left color stripe */}
-                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: isDone ? '#cbd5e1' : cat.color }} />
+                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: cat.color, opacity: isDone ? 0.3 : 1 }} />
 
                 {(isNow || isFocused) && (
                   <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse shadow-sm" />

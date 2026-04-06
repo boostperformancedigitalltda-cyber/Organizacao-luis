@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 import { onAuth, signInWithGoogle, logout, fsGetAll, initSync, KEY_MAP, fsSetDirect } from '@/lib/firebase'
 import { get, set } from '@/lib/storage'
+
+export const AuthContext = createContext(null)
+export function useAuth() { return useContext(AuthContext) }
 
 export default function AuthWrapper({ children }) {
   const [user, setUser] = useState(null)
@@ -128,19 +131,10 @@ export default function AuthWrapper({ children }) {
     )
   }
 
-  // User logged in — render the app
+  // User logged in — render the app with user context
   return (
-    <>
+    <AuthContext.Provider value={{ user, logout }}>
       {children}
-      {/* User avatar + logout */}
-      <div className="fixed top-4 left-4 z-30 flex items-center gap-2">
-        {user.photoURL && (
-          <button onClick={() => { if (confirm('Sair da conta?')) logout() }} className="flex items-center gap-1.5 bg-white/90 border border-slate-200 shadow-sm rounded-xl px-2 py-1 active:bg-slate-50">
-            <img src={user.photoURL} alt={user.displayName} className="w-6 h-6 rounded-full" />
-            <span className="text-[10px] font-bold text-slate-400">Sair</span>
-          </button>
-        )}
-      </div>
-    </>
+    </AuthContext.Provider>
   )
 }
