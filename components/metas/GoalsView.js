@@ -5,7 +5,30 @@ import {
   loadGoals, addGoal, removeGoal, updateGoalValue,
   getGoalCat, goalProgress, goalStatus,
 } from '@/lib/goals'
+import { loadTransactions, calcMonthSummary, fmt } from '@/lib/finance'
 import AddGoalModal from './AddGoalModal'
+
+function FinanceGoalBanner({ goal }) {
+  const { entradas, saidas, saldo } = calcMonthSummary(loadTransactions())
+  const isEconomia = goal.unit === 'R$' && goal.title.toLowerCase().includes('economi')
+  const autoValue = isEconomia ? saldo : saidas
+  const pct = goal.targetValue > 0 ? Math.min(100, Math.round((autoValue / goal.targetValue) * 100)) : 0
+
+  return (
+    <div className="mt-2 bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide mb-1">📊 Dados automáticos do mês</p>
+      <div className="flex gap-3 text-xs">
+        <div><span className="text-slate-500">Entradas: </span><span className="font-bold text-emerald-600">{fmt(entradas)}</span></div>
+        <div><span className="text-slate-500">Saídas: </span><span className="font-bold text-red-500">{fmt(saidas)}</span></div>
+        <div><span className="text-slate-500">Saldo: </span><span className="font-bold text-slate-700">{fmt(saldo)}</span></div>
+      </div>
+      <div className="h-1.5 bg-emerald-100 rounded-full overflow-hidden mt-2">
+        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-[10px] text-emerald-600 mt-1">{pct}% da meta atingido automaticamente</p>
+    </div>
+  )
+}
 
 function GoalCard({ goal, onUpdateValue, onRemove }) {
   const [editing, setEditing] = useState(false)
@@ -62,6 +85,9 @@ function GoalCard({ goal, onUpdateValue, onRemove }) {
           />
         </div>
       </div>
+
+      {/* Finance auto-data */}
+      {goal.category === 'financeiro' && <FinanceGoalBanner goal={goal} />}
 
       {/* Edit value */}
       {editing ? (

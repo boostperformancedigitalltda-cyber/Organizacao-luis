@@ -20,8 +20,11 @@ import { loadDayPlan, saveDayPlan, timeToMinutes } from '@/lib/planner'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
 import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
-import { loadNotifSettings, scheduleAll, getPermission } from '@/lib/notifications'
+import { loadNotifSettings, scheduleAll, scheduleBlockNotifications, getPermission } from '@/lib/notifications'
 import { loadTasks, loadProjetos } from '@/lib/projetos'
+import { loadPlanos, getTodayPlano, loadLogs, addLog } from '@/lib/treino'
+import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock } from '@/lib/estudos'
+import RoutineEditor from '@/components/rotina/RoutineEditor'
 
 // Inbox view (processar itens capturados)
 import { getPendingInbox, removeFromInbox, markProcessed, CAPTURE_TYPES } from '@/lib/quickcapture'
@@ -145,6 +148,7 @@ export default function Home() {
     }
     if (typeof window !== 'undefined' && getPermission() === 'granted') {
       scheduleAll(loadNotifSettings())
+      if (savedPlan?.blocks) scheduleBlockNotifications(savedPlan.blocks)
     }
     setLoaded(true)
   }, []) // eslint-disable-line
@@ -164,10 +168,32 @@ export default function Home() {
 
   const handleToggle = (uid) => {
     if (!plan) return
-    const newCompleted = { ...plan.completed, [uid]: !plan.completed[uid] }
+    const nowDone = !plan.completed[uid]
+    const newCompleted = { ...plan.completed, [uid]: nowDone }
     const newPlan = { ...plan, completed: newCompleted }
     setPlan(newPlan)
     saveDayPlan(dk, newPlan)
+
+    // Auto-sync: treino block done → log treino
+    if (nowDone) {
+      const block = plan.blocks.find((b) => b.uid === uid)
+      if (block?.category === 'treino') {
+        const planos = loadPlanos()
+        const todayPlano = getTodayPlano(planos)
+        if (todayPlano) {
+          const logs = loadLogs()
+          const alreadyLogged = logs.some((l) => l.date === dk && l.planoId === todayPlano.id)
+          if (!alreadyLogged) addLog(logs, { planoId: todayPlano.id, date: dk })
+        }
+      }
+      // Auto-sync: estudo block done → mark study block done
+      if (block?.category === 'estudo' && block?.materiaId) {
+        const allStudy = loadStudyBlocks()
+        const todayStudy = getBlocksForDate(allStudy, dk)
+        const match = todayStudy.find((sb) => sb.materiaId === block.materiaId && !sb.completed)
+        if (match) toggleStudyBlock(allStudy, match.id)
+      }
+    }
   }
 
   const handleAddBlock = (block, isEdit) => {
@@ -277,6 +303,7 @@ export default function Home() {
         {tab === 'financas' && <FinanceTab />}
         {/* Secondary (via Mais) */}
         {tab === 'dashboard' && <DashboardView />}
+        {tab === 'rotina'   && <RoutineEditor />}
         {tab === 'habitos'  && <HabitsView />}
         {tab === 'metas'    && <GoalsView />}
         {tab === 'semana'   && <WeekPlanner />}

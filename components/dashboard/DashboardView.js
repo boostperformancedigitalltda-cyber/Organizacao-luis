@@ -5,7 +5,7 @@ import { loadDayPlan, calcProgress } from '@/lib/planner'
 import { loadMaterias, loadStudyBlocks, getWeeklyStats, formatMin, getBlocksForDate } from '@/lib/estudos'
 import { loadTransactions, calcMonthSummary, calcByCategory, fmt } from '@/lib/finance'
 import { loadProjetos, loadTasks, getProjetoStats } from '@/lib/projetos'
-import { loadHabits, loadHabitLogs, isHabitDueToday } from '@/lib/habits'
+import { loadHabits, loadHabitLogs, isHabitDueToday, getStreak } from '@/lib/habits'
 import { loadPlanos, getTodayPlano, loadLogs } from '@/lib/treino'
 import { dateKey, startOfWeek, getLast } from '@/lib/date'
 
@@ -72,6 +72,36 @@ function WeekStrip({ weekDays }) {
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// ── Habit Streaks ─────────────────────────────────────────────────────────────
+function HabitStreaks({ habits, habitLogs }) {
+  const streaks = habits
+    .map((h) => ({ ...h, streak: getStreak(habitLogs, h.id) }))
+    .filter((h) => h.streak > 0)
+    .sort((a, b) => b.streak - a.streak)
+    .slice(0, 5)
+
+  if (streaks.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">🔥 Streaks de hábitos</p>
+      <div className="space-y-2.5">
+        {streaks.map((h, i) => (
+          <div key={h.id} className="flex items-center gap-3">
+            <span className="text-[11px] font-black text-slate-300 w-4">#{i + 1}</span>
+            <span className="text-lg">{h.icon}</span>
+            <span className="text-sm font-medium text-slate-700 flex-1 truncate">{h.title}</span>
+            <div className="flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-full">
+              <span className="text-sm">🔥</span>
+              <span className="text-xs font-black text-amber-600">{h.streak} dias</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -445,6 +475,11 @@ export default function DashboardView() {
       {/* Semana strip */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
         <WeekStrip weekDays={weekDays} />
+      </div>
+
+      {/* Habit streaks */}
+      <div className="mb-4">
+        <HabitStreaks habits={habits} habitLogs={habitLogs} />
       </div>
 
       {/* Hábitos heatmap */}
