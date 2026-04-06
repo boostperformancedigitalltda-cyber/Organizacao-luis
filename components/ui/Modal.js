@@ -23,8 +23,8 @@ export default function Modal({ open, onClose, title, children, fullHeight = fal
       />
       {/* Sheet */}
       <div
-        className={`relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl animate-slide-up modal-sheet ${
-          fullHeight ? 'h-[90vh] flex flex-col' : 'max-h-[90vh]'
+        className={`relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl animate-slide-up modal-sheet flex flex-col ${
+          fullHeight ? 'h-[90vh]' : 'max-h-[90vh]'
         }`}
       >
         {/* Handle bar */}
@@ -44,7 +44,7 @@ export default function Modal({ open, onClose, title, children, fullHeight = fal
           </div>
         )}
         {/* Scrollable content */}
-        <div className={`overflow-y-auto overscroll-contain ${fullHeight ? 'flex-1' : ''}`}>
+        <div className="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch">
           {children}
         </div>
       </div>

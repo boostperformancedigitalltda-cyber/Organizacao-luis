@@ -101,3 +101,8 @@ input[type='number']::-webkit-inner-spin-button {
   border-radius: 20px 20px 0 0;
   padding-bottom: max(20px, var(--safe-bottom));
 }
+
+.modal-sheet > div:last-child {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
