@@ -15,6 +15,7 @@ import WeeklyReview from '@/components/weeklyreview/WeeklyReview'
 import AuthWrapper from '@/components/auth/AuthWrapper'
 import MaisMenu from '@/components/ui/MaisMenu'
 import HabitsView from '@/components/habitos/HabitsView'
+import DashboardView from '@/components/dashboard/DashboardView'
 import { loadDayPlan, saveDayPlan, timeToMinutes } from '@/lib/planner'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
@@ -275,6 +276,7 @@ export default function Home() {
         {tab === 'projetos' && <ProjetosView />}
         {tab === 'financas' && <FinanceTab />}
         {/* Secondary (via Mais) */}
+        {tab === 'dashboard' && <DashboardView />}
         {tab === 'habitos'  && <HabitsView />}
         {tab === 'metas'    && <GoalsView />}
         {tab === 'semana'   && <WeekPlanner />}
