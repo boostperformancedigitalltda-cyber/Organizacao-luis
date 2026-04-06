@@ -7,6 +7,7 @@ import {
   loadLogs, addLog,
   getTodayPlano, DAY_NAMES, DAY_SHORT,
 } from '@/lib/treino'
+import { seedTreino } from '@/lib/seedTreino'
 
 // ── Exercise Row ──────────────────────────────────────────────────────────────
 function ExerciseRow({ ex, onUpdate, onRemove, sessionMode, checked, onCheck, sets, onSetUpdate }) {
@@ -454,9 +455,16 @@ export default function TreinoView() {
       {subTab === 'plano' && (
         <div className="space-y-3">
           {planos.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-10 text-slate-400">
               <div className="text-4xl mb-2">💪</div>
-              <p className="text-sm">Nenhum dia de treino. Adicione seu plano!</p>
+              <p className="text-sm font-medium text-slate-500 mb-1">Nenhum dia de treino.</p>
+              <p className="text-xs mb-5">Adicione manualmente ou carregue o plano PPL</p>
+              <button
+                onClick={() => setPlanos(seedTreino())}
+                className="mx-auto flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-sm text-sm"
+              >
+                ⚡ Carregar Plano PPL (Bodytech)
+              </button>
             </div>
           )}
           {planos.map((p) => (
@@ -479,6 +487,12 @@ export default function TreinoView() {
             className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 font-semibold py-3 rounded-2xl hover:bg-indigo-50 transition-colors text-sm"
           >
             + Novo dia de treino
+          </button>
+          <button
+            onClick={() => { if (confirm('Isso vai substituir todos os treinos atuais pelo plano PPL Bodytech. Continuar?')) setPlanos(seedTreino()) }}
+            className="w-full border-2 border-dashed border-emerald-200 text-emerald-600 font-semibold py-3 rounded-2xl hover:bg-emerald-50 transition-colors text-sm"
+          >
+            ⚡ Carregar Plano PPL Bodytech
           </button>
         </div>
       )}
