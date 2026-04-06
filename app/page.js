@@ -23,7 +23,7 @@ import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
 import { loadNotifSettings, scheduleAll, scheduleBlockNotifications, getPermission } from '@/lib/notifications'
 import { loadTasks, loadProjetos } from '@/lib/projetos'
 import { loadPlanos, getTodayPlano, loadLogs, addLog } from '@/lib/treino'
-import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock } from '@/lib/estudos'
+import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock, addStudyBlock } from '@/lib/estudos'
 import RoutineEditor from '@/components/rotina/RoutineEditor'
 
 // Inbox view (processar itens capturados)
@@ -186,12 +186,25 @@ export default function Home() {
           if (!alreadyLogged) addLog(logs, { planoId: todayPlano.id, date: dk })
         }
       }
-      // Auto-sync: estudo block done → mark study block done
+      // Auto-sync: estudo block done → mark study block done (cria se não existe)
       if (block?.category === 'estudo' && block?.materiaId) {
         const allStudy = loadStudyBlocks()
         const todayStudy = getBlocksForDate(allStudy, dk)
-        const match = todayStudy.find((sb) => sb.materiaId === block.materiaId && !sb.completed)
-        if (match) toggleStudyBlock(allStudy, match.id)
+        const match = todayStudy.find((sb) => sb.materiaId === block.materiaId)
+        if (match) {
+          if (!match.completed) toggleStudyBlock(allStudy, match.id)
+        } else {
+          // Cria o bloco e já marca como concluído
+          const created = addStudyBlock(allStudy, {
+            date: dk,
+            materiaId: block.materiaId,
+            topic: block.note || '',
+            startTime: block.startTime,
+            endTime: block.endTime,
+          })
+          const newBlock = created[0]
+          toggleStudyBlock(created, newBlock.id)
+        }
       }
     }
   }
@@ -208,6 +221,24 @@ export default function Home() {
     const newPlan = { ...plan, blocks: newBlocks }
     setPlan(newPlan)
     saveDayPlan(dk, newPlan)
+
+    // Auto-criar bloco de estudo na aba Estudos ao adicionar bloco com matéria
+    if (!isEdit && block.category === 'estudo' && block.materiaId) {
+      const allStudy = loadStudyBlocks()
+      // Evita duplicar se já existe bloco para essa matéria nesse dia/horário
+      const exists = getBlocksForDate(allStudy, dk).some(
+        (sb) => sb.materiaId === block.materiaId && sb.startTime === block.startTime
+      )
+      if (!exists) {
+        addStudyBlock(allStudy, {
+          date: dk,
+          materiaId: block.materiaId,
+          topic: block.note || '',
+          startTime: block.startTime,
+          endTime: block.endTime,
+        })
+      }
+    }
   }
 
   const handleRemoveBlock = (uid) => {
