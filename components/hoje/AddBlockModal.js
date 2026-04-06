@@ -171,7 +171,7 @@ export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialB
 
         <button
           onClick={handleSave}
-          className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl transition-colors shadow-sm"
+          className="w-full py-3.5 btn-primary rounded-xl font-bold"
         >
           Salvar bloco
         </button>

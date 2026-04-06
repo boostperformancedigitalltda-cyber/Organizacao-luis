@@ -265,29 +265,31 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
   return (
     <div className="pb-4">
       {/* Header */}
-      <div className="mb-5">
+      <div className="mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-900 capitalize">{dayName}</h1>
-            <p className="text-sm text-slate-500">{dateStr}</p>
+            <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-0.5">{dateStr}</p>
+            <h1 className="text-3xl font-black text-slate-900 capitalize leading-tight">{dayName}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{ENERGY_EMOJI[energy] || '🙂'}</span>
+            <div className="w-10 h-10 rounded-2xl bg-white shadow-card flex items-center justify-center text-xl">
+              {ENERGY_EMOJI[energy] || '🙂'}
+            </div>
             {plan.streak > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1">
-                <span className="text-xs font-bold text-amber-600">🔥 {plan.streak}</span>
+              <div className="bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl px-2.5 py-1.5 shadow-sm">
+                <span className="text-xs font-black text-white">🔥 {plan.streak}</span>
               </div>
             )}
           </div>
         </div>
         {/* Overall progress */}
-        <div className="mt-3">
-          <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-            <span className="font-semibold">{count}/{total} blocos</span>
-            <span className="font-bold text-indigo-500">{pct}%</span>
+        <div className="mt-4 bg-white rounded-2xl px-4 py-3 shadow-card border border-slate-100">
+          <div className="flex justify-between text-xs mb-2">
+            <span className="font-bold text-slate-500">{count}/{total} blocos concluídos</span>
+            <span className="font-black text-indigo-600">{pct}%</span>
           </div>
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full progress-indigo rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
           </div>
         </div>
       </div>
@@ -347,27 +349,29 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
 
             return (
               <div key={block.uid}
-                className={`relative bg-white rounded-2xl border transition-all duration-200 ${
-                  isFocused ? 'border-indigo-400 ring-2 ring-indigo-100 shadow-md' :
-                  isNow     ? 'border-indigo-300 shadow-md ring-2 ring-indigo-100' :
-                  isDone    ? 'border-slate-100 opacity-60' :
-                              'border-slate-100 shadow-sm'
+                className={`relative bg-white rounded-2xl border overflow-hidden transition-all duration-200 ${
+                  isFocused ? 'border-indigo-300 ring-2 ring-indigo-100 shadow-card-hover' :
+                  isNow     ? 'border-indigo-200 ring-2 ring-indigo-100 shadow-card-hover' :
+                  isDone    ? 'border-slate-100 opacity-55' :
+                              'border-slate-100 shadow-card'
                 }`}
               >
+                {/* Left color stripe */}
+                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: isDone ? '#cbd5e1' : cat.color }} />
+
                 {(isNow || isFocused) && (
-                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse shadow-sm" />
                 )}
-                <div className="p-3.5 flex items-center gap-3">
+                <div className="pl-4 pr-3.5 py-3.5 flex items-center gap-3">
                   <button onClick={() => onToggle(block.uid)}
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                      isDone ? 'bg-emerald-500 border-emerald-500' :
+                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      isDone ? 'bg-emerald-500 border-emerald-500 shadow-sm' :
                       isNow  ? 'border-indigo-400' :
                                'border-slate-200'
                     }`}
                   >
-                    {isDone && <span className="text-white text-xs font-bold">✓</span>}
+                    {isDone && <span className="text-white text-xs font-bold check-in">✓</span>}
                   </button>
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cat.dot}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-base leading-none">{block.icon}</span>
@@ -408,7 +412,7 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
 
       {/* Add block FAB */}
       <button onClick={() => setAddOpen(true)}
-        className="fixed right-4 w-14 h-14 bg-indigo-500 text-white rounded-2xl shadow-lg flex items-center justify-center text-2xl transition-all active:scale-90 z-30"
+        className="fixed right-4 w-14 h-14 btn-primary rounded-2xl flex items-center justify-center text-2xl font-light active:scale-90 z-30"
         style={{ bottom: 'calc(var(--nav-height) + var(--safe-bottom) + 16px)' }}>
         +
       </button>

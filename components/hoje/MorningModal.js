@@ -72,14 +72,14 @@ export default function MorningModal({ date, onComplete, onCancel, prevPlan, pen
     .slice(0, 4)
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-indigo-50 to-white flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'linear-gradient(160deg, #e0e7ff 0%, #f0f4ff 40%, #ffffff 100%)' }}>
       {/* Progress indicator */}
       <div className="px-6 pt-12 pb-4">
         <div className="flex gap-2 mb-6">
           {[1, 2, 3].map((s) => (
             <div
               key={s}
-              className={`h-1 flex-1 rounded-full transition-all duration-300 ${s <= step ? 'bg-indigo-500' : 'bg-slate-200'}`}
+              className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'progress-indigo' : 'bg-slate-200'}`}
             />
           ))}
         </div>
@@ -306,14 +306,14 @@ export default function MorningModal({ date, onComplete, onCancel, prevPlan, pen
           {step < 3 ? (
             <button
               onClick={() => setStep(step + 1)}
-              className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl transition-colors shadow-sm"
+              className="flex-1 py-3.5 btn-primary rounded-xl font-bold"
             >
               Próximo →
             </button>
           ) : (
             <button
               onClick={handleFinish}
-              className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl transition-colors shadow-sm"
+              className="flex-1 py-3.5 btn-primary rounded-xl font-bold"
             >
               {isTomorrow ? 'Salvar plano →' : 'Começar o dia →'}
             </button>
