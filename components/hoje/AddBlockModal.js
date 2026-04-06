@@ -1,13 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { BLOCK_CATEGORIES, makeNewBlock } from '@/lib/planner'
+import { loadMaterias } from '@/lib/estudos'
 
 const ICONS = ['📌', '📚', '💪', '🏠', '💼', '🍳', '🧹', '🎯', '💰', '🎮', '🏃', '🧘', '📝', '🔧', '🛒', '☕', '🎵', '📞']
 
 export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
   const [block, setBlock] = useState(initialBlock || makeNewBlock())
+  const [materias, setMaterias] = useState([])
+
+  useEffect(() => {
+    setMaterias(loadMaterias())
+  }, [])
 
   const handleOpen = () => {
     setBlock(initialBlock || makeNewBlock())
@@ -20,6 +26,17 @@ export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
     onAdd(block)
     onClose()
   }
+
+  const selectMateria = (mat) => {
+    setBlock((prev) => ({
+      ...prev,
+      title: mat.name,
+      icon: mat.icon,
+      materiaId: mat.id,
+    }))
+  }
+
+  const isEstudo = block.category === 'estudo'
 
   return (
     <Modal open={open} onClose={onClose} title={initialBlock ? 'Editar bloco' : 'Novo bloco'}>
@@ -83,7 +100,10 @@ export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
             {BLOCK_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => update('category', cat.id)}
+                onClick={() => {
+                  update('category', cat.id)
+                  if (cat.id !== 'estudo') update('materiaId', null)
+                }}
                 className={`px-3 py-2.5 rounded-xl text-sm font-semibold transition-all min-h-[44px] ${
                   block.category === cat.id
                     ? 'text-white shadow-sm'
@@ -96,6 +116,46 @@ export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
             ))}
           </div>
         </div>
+
+        {/* Materia picker (only when estudo) */}
+        {isEstudo && materias.length > 0 && (
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Matéria</label>
+            <div className="flex flex-col gap-2 mt-2">
+              {materias.map((mat) => {
+                const selected = block.materiaId === mat.id
+                return (
+                  <button
+                    key={mat.id}
+                    onClick={() => selectMateria(mat)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left ${
+                      selected
+                        ? 'border-indigo-400 bg-indigo-50'
+                        : 'border-slate-100 bg-slate-50 hover:border-slate-200'
+                    }`}
+                  >
+                    <span className="text-xl">{mat.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${selected ? 'text-indigo-700' : 'text-slate-700'}`}>
+                        {mat.name}
+                      </p>
+                      {mat.weeklyGoalHours && (
+                        <p className="text-[10px] text-slate-400">Meta: {mat.weeklyGoalHours}h/semana</p>
+                      )}
+                    </div>
+                    {selected && <span className="text-indigo-500 font-bold text-sm">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {isEstudo && materias.length === 0 && (
+          <div className="bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-600 font-medium">
+            Nenhuma matéria cadastrada. Adicione na aba Estudos.
+          </div>
+        )}
 
         {/* Note */}
         <div>

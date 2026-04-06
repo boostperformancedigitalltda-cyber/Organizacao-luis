@@ -15,7 +15,7 @@ import WeeklyReview from '@/components/weeklyreview/WeeklyReview'
 import AuthWrapper from '@/components/auth/AuthWrapper'
 import MaisMenu from '@/components/ui/MaisMenu'
 import HabitsView from '@/components/habitos/HabitsView'
-import { loadDayPlan, saveDayPlan } from '@/lib/planner'
+import { loadDayPlan, saveDayPlan, timeToMinutes } from '@/lib/planner'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
 import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
@@ -173,6 +173,7 @@ export default function Home() {
     } else {
       newBlocks = [...plan.blocks, block]
     }
+    newBlocks = [...newBlocks].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
     const newPlan = { ...plan, blocks: newBlocks }
     setPlan(newPlan)
     saveDayPlan(dk, newPlan)
