@@ -118,6 +118,10 @@ export default function Home() {
 
   useEffect(() => {
     const savedPlan = loadDayPlan(dk)
+    if (savedPlan?.blocks) {
+      savedPlan.blocks = [...savedPlan.blocks].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+      saveDayPlan(dk, savedPlan)
+    }
     setPlan(savedPlan)
     setTomorrowPlan(loadDayPlan(dateKey(tomorrow)))
 
