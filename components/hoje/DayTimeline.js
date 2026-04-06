@@ -198,7 +198,7 @@ function TreinoCard({ plano, logs, onNavigate }) {
 }
 
 // ── Main DayTimeline ──────────────────────────────────────────────────────────
-export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNavigate, onPlanTomorrow, hasTomorrowPlan }) {
+export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock, onReset, onNavigate, onPlanTomorrow, hasTomorrowPlan }) {
   const { date, energy, priorities, blocks, completed } = plan
   const [now, setNow] = useState(new Date())
   const [addOpen, setAddOpen] = useState(false)
@@ -434,7 +434,13 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onReset, onNav
 
       <AddBlockModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={(b) => { onAddBlock(b, false); setAddOpen(false) }} />
       {editBlock && (
-        <AddBlockModal open={!!editBlock} onClose={() => setEditBlock(null)} onAdd={(b) => { onAddBlock(b, true); setEditBlock(null) }} initialBlock={editBlock} />
+        <AddBlockModal
+          open={!!editBlock}
+          onClose={() => setEditBlock(null)}
+          onAdd={(b) => { onAddBlock(b, true); setEditBlock(null) }}
+          onRemove={(uid) => { onRemoveBlock(uid); setEditBlock(null) }}
+          initialBlock={editBlock}
+        />
       )}
     </div>
   )

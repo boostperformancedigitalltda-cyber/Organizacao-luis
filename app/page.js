@@ -183,6 +183,14 @@ export default function Home() {
     saveDayPlan(dk, newPlan)
   }
 
+  const handleRemoveBlock = (uid) => {
+    if (!plan) return
+    const newBlocks = plan.blocks.filter((b) => b.uid !== uid)
+    const newPlan = { ...plan, blocks: newBlocks }
+    setPlan(newPlan)
+    saveDayPlan(dk, newPlan)
+  }
+
   const handleReset = () => {
     setPlan(null)
     saveDayPlan(dk, null)
@@ -255,6 +263,7 @@ export default function Home() {
             plan={plan}
             onToggle={handleToggle}
             onAddBlock={handleAddBlock}
+            onRemoveBlock={handleRemoveBlock}
             onReset={handleReset}
             onNavigate={handleTabChange}
             onPlanTomorrow={() => setShowPlanTomorrow(true)}

@@ -7,7 +7,7 @@ import { loadMaterias } from '@/lib/estudos'
 
 const ICONS = ['📌', '📚', '💪', '🏠', '💼', '🍳', '🧹', '🎯', '💰', '🎮', '🏃', '🧘', '📝', '🔧', '🛒', '☕', '🎵', '📞']
 
-export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
+export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialBlock }) {
   const [block, setBlock] = useState(initialBlock || makeNewBlock())
   const [materias, setMaterias] = useState([])
 
@@ -175,6 +175,15 @@ export default function AddBlockModal({ open, onClose, onAdd, initialBlock }) {
         >
           Salvar bloco
         </button>
+
+        {initialBlock && onRemove && (
+          <button
+            onClick={() => { onRemove(initialBlock.uid); onClose() }}
+            className="w-full py-3 bg-white border border-red-200 text-red-500 hover:bg-red-50 font-semibold rounded-xl transition-colors text-sm"
+          >
+            Remover bloco
+          </button>
+        )}
       </div>
     </Modal>
   )
