@@ -281,14 +281,6 @@ export default function Home() {
         {tab === 'inbox'    && <InboxView inbox={inbox} setInbox={setInbox} />}
       </div>
 
-      {/* Review button */}
-      <button
-        onClick={() => setShowReview(true)}
-        className="fixed top-4 right-4 z-30 bg-white border border-slate-200 shadow-sm rounded-xl px-3 py-1.5 text-xs font-bold text-slate-600 active:bg-slate-50 transition-all flex items-center gap-1.5"
-      >
-        📋 Review
-      </button>
-
       {/* Quick Capture FAB */}
       <QuickCapture inbox={inbox} setInbox={setInbox} />
 
@@ -297,6 +289,7 @@ export default function Home() {
         <MaisMenu
           onNavigate={(id) => { setTab(id); setShowMais(false) }}
           onClose={() => setShowMais(false)}
+          onReview={() => setShowReview(true)}
           pendingInbox={pendingInbox}
         />
       )}

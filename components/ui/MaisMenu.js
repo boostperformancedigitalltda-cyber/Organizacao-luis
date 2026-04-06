@@ -10,7 +10,7 @@ const ITEMS = [
   { id: 'inbox',   label: 'Inbox',   icon: '⚡', color: 'bg-amber-50   text-amber-600'   },
 ]
 
-export default function MaisMenu({ onNavigate, onClose, pendingInbox = 0 }) {
+export default function MaisMenu({ onNavigate, onClose, onReview, pendingInbox = 0 }) {
   const [showNotif, setShowNotif] = useState(false)
 
   return (
@@ -23,12 +23,22 @@ export default function MaisMenu({ onNavigate, onClose, pendingInbox = 0 }) {
           </div>
           <div className="px-5 pt-2 pb-2 flex items-center justify-between">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mais seções</p>
-            <button
-              onClick={() => setShowNotif(true)}
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl active:bg-slate-200"
-            >
-              🔔 Notificações
-            </button>
+            <div className="flex gap-2">
+              {onReview && (
+                <button
+                  onClick={() => { onReview(); onClose() }}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl active:bg-slate-200"
+                >
+                  📋 Review
+                </button>
+              )}
+              <button
+                onClick={() => setShowNotif(true)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl active:bg-slate-200"
+              >
+                🔔 Notificações
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3 px-5 pb-6">
             {ITEMS.map((item) => (
