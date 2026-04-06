@@ -24,10 +24,75 @@ import { loadNotifSettings, scheduleAll, scheduleBlockNotifications, getPermissi
 import { loadTasks, loadProjetos } from '@/lib/projetos'
 import { loadPlanos, getTodayPlano, loadLogs, addLog } from '@/lib/treino'
 import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock, addStudyBlock } from '@/lib/estudos'
+import { set as storageSet } from '@/lib/storage'
 import RoutineEditor from '@/components/rotina/RoutineEditor'
 
 // Inbox view (processar itens capturados)
 import { getPendingInbox, removeFromInbox, markProcessed, CAPTURE_TYPES } from '@/lib/quickcapture'
+
+// ── Sync blocos da agenda com outras abas ─────────────────────────────────────
+function syncBlocksToTabs(plan, dk) {
+  if (!plan?.blocks) return
+
+  // ── Estudos ──────────────────────────────────────────────────────────────
+  let studyBlocks = loadStudyBlocks()
+  const todayStudy = getBlocksForDate(studyBlocks, dk)
+  let studyChanged = false
+
+  plan.blocks.forEach((block) => {
+    if (block.category !== 'estudo' || !block.materiaId) return
+    const isDone = !!plan.completed?.[block.uid]
+
+    let match = todayStudy.find(
+      (sb) => sb.materiaId === block.materiaId && sb.startTime === block.startTime
+    )
+
+    if (!match) {
+      // Cria o bloco de estudo
+      const newSb = {
+        id: `auto-${block.uid}`,
+        date: dk,
+        materiaId: block.materiaId,
+        topic: block.note || '',
+        startTime: block.startTime,
+        endTime: block.endTime,
+        completed: isDone,
+        note: block.note || '',
+      }
+      studyBlocks = [newSb, ...studyBlocks]
+      todayStudy.push(newSb)
+      studyChanged = true
+    } else if (isDone && !match.completed) {
+      studyBlocks = studyBlocks.map((sb) =>
+        sb.id === match.id ? { ...sb, completed: true } : sb
+      )
+      studyChanged = true
+    }
+  })
+
+  if (studyChanged) storageSet('sdv2-study-blocks', studyBlocks)
+
+  // ── Treino ───────────────────────────────────────────────────────────────
+  const planos = loadPlanos()
+  let logs = loadLogs()
+  let logsChanged = false
+
+  plan.blocks.forEach((block) => {
+    if (block.category !== 'treino') return
+    if (!plan.completed?.[block.uid]) return
+
+    const planoId = block.planoId || getTodayPlano(planos)?.id
+    if (!planoId) return
+
+    const alreadyLogged = logs.some((l) => l.date === dk && l.planoId === planoId)
+    if (!alreadyLogged) {
+      logs = [{ id: `auto-${block.uid}`, planoId, date: dk, exercises: [], duration: 0, note: '', completedAt: new Date().toISOString() }, ...logs]
+      logsChanged = true
+    }
+  })
+
+  if (logsChanged) storageSet('sdv2-treino-logs', logs)
+}
 
 function InboxView({ inbox, setInbox }) {
   const pending = getPendingInbox(inbox)
@@ -125,6 +190,7 @@ export default function Home() {
     if (savedPlan?.blocks) {
       savedPlan.blocks = [...savedPlan.blocks].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
       saveDayPlan(dk, savedPlan)
+      syncBlocksToTabs(savedPlan, dk)
     }
     setPlan(savedPlan)
     setTomorrowPlan(loadDayPlan(dateKey(tomorrow)))
@@ -179,11 +245,11 @@ export default function Home() {
       const block = plan.blocks.find((b) => b.uid === uid)
       if (block?.category === 'treino') {
         const planos = loadPlanos()
-        const todayPlano = getTodayPlano(planos)
-        if (todayPlano) {
+        const planoId = block.planoId || getTodayPlano(planos)?.id
+        if (planoId) {
           const logs = loadLogs()
-          const alreadyLogged = logs.some((l) => l.date === dk && l.planoId === todayPlano.id)
-          if (!alreadyLogged) addLog(logs, { planoId: todayPlano.id, date: dk })
+          const alreadyLogged = logs.some((l) => l.date === dk && l.planoId === planoId)
+          if (!alreadyLogged) addLog(logs, { planoId, date: dk })
         }
       }
       // Auto-sync: estudo block done → mark study block done (cria se não existe)

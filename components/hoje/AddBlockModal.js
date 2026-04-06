@@ -4,15 +4,18 @@ import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { BLOCK_CATEGORIES, makeNewBlock } from '@/lib/planner'
 import { loadMaterias } from '@/lib/estudos'
+import { loadPlanos } from '@/lib/treino'
 
 const ICONS = ['📌', '📚', '💪', '🏠', '💼', '🍳', '🧹', '🎯', '💰', '🎮', '🏃', '🧘', '📝', '🔧', '🛒', '☕', '🎵', '📞']
 
 export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialBlock }) {
   const [block, setBlock] = useState(initialBlock || makeNewBlock())
   const [materias, setMaterias] = useState([])
+  const [planos, setPlanos] = useState([])
 
   useEffect(() => {
     setMaterias(loadMaterias())
+    setPlanos(loadPlanos())
   }, [])
 
   const handleOpen = () => {
@@ -28,15 +31,15 @@ export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialB
   }
 
   const selectMateria = (mat) => {
-    setBlock((prev) => ({
-      ...prev,
-      title: mat.name,
-      icon: mat.icon,
-      materiaId: mat.id,
-    }))
+    setBlock((prev) => ({ ...prev, title: mat.name, icon: mat.icon, materiaId: mat.id }))
+  }
+
+  const selectPlano = (plano) => {
+    setBlock((prev) => ({ ...prev, title: plano.name, icon: '💪', planoId: plano.id }))
   }
 
   const isEstudo = block.category === 'estudo'
+  const isTreino = block.category === 'treino'
 
   return (
     <Modal open={open} onClose={onClose} title={initialBlock ? 'Editar bloco' : 'Novo bloco'}>
@@ -103,6 +106,7 @@ export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialB
                 onClick={() => {
                   update('category', cat.id)
                   if (cat.id !== 'estudo') update('materiaId', null)
+                  if (cat.id !== 'treino') update('planoId', null)
                 }}
                 className={`px-3 py-2.5 rounded-xl text-sm font-semibold transition-all min-h-[44px] ${
                   block.category === cat.id
@@ -154,6 +158,45 @@ export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialB
         {isEstudo && materias.length === 0 && (
           <div className="bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-600 font-medium">
             Nenhuma matéria cadastrada. Adicione na aba Estudos.
+          </div>
+        )}
+
+        {/* Treino plano picker */}
+        {isTreino && planos.length > 0 && (
+          <div>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Treino</label>
+            <div className="flex flex-col gap-2 mt-2">
+              {planos.map((plano) => {
+                const selected = block.planoId === plano.id
+                const DAY = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+                return (
+                  <button
+                    key={plano.id}
+                    onClick={() => selectPlano(plano)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left ${
+                      selected ? 'border-emerald-400 bg-emerald-50' : 'border-slate-100 bg-slate-50 hover:border-slate-200'
+                    }`}
+                  >
+                    <span className="text-xl">💪</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${selected ? 'text-emerald-700' : 'text-slate-700'}`}>
+                        {plano.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {DAY[plano.dayOfWeek]} · {plano.exercises?.length || 0} exercícios
+                      </p>
+                    </div>
+                    {selected && <span className="text-emerald-500 font-bold text-sm">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {isTreino && planos.length === 0 && (
+          <div className="bg-emerald-50 rounded-xl px-3 py-2.5 text-xs text-emerald-600 font-medium">
+            Nenhum treino cadastrado. Adicione na aba Treino.
           </div>
         )}
 
