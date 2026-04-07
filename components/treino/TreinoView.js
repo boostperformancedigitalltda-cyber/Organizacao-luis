@@ -239,14 +239,44 @@ function PlanoCard({ plano, isToday, existingDays, onUpdate, onRemove, onDuplica
   )
 }
 
+const SESSION_KEY = 'sdv2-active-treino-session'
+
+function saveSession(plano, checked, setsDone, startTs) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ plano, checked, setsDone, startTs }))
+  } catch {}
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY) } catch {}
+}
+
 // ── Session Mode (active workout) ─────────────────────────────────────────────
 function SessionMode({ plano, onFinish, onCancel }) {
-  const [checked, setChecked] = useState({})
-  const [setsDone, setSetsDone] = useState({})
-  const [elapsed, setElapsed] = useState(0)
-  const startRef = useRef(Date.now())
+  // Restore from localStorage if session was saved (tab switch)
+  const saved = loadSession()
+  const isRestore = saved?.plano?.id === plano.id
+
+  const [checked, setChecked] = useState(isRestore ? (saved.checked || {}) : {})
+  const [setsDone, setSetsDone] = useState(isRestore ? (saved.setsDone || {}) : {})
+  const [elapsed, setElapsed] = useState(isRestore ? Math.floor((Date.now() - saved.startTs) / 1000) : 0)
+  const startRef = useRef(isRestore ? saved.startTs : Date.now())
+
+  // Persist session to localStorage whenever state changes
+  useEffect(() => {
+    saveSession(plano, checked, setsDone, startRef.current)
+  }, [checked, setsDone])
 
   useEffect(() => {
+    // Save on mount so startTs is always persisted
+    saveSession(plano, checked, setsDone, startRef.current)
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - startRef.current) / 1000)), 1000)
     return () => clearInterval(t)
   }, [])
@@ -299,12 +329,12 @@ function SessionMode({ plano, onFinish, onCancel }) {
 
       <div className="flex gap-3">
         <button
-          onClick={() => onFinish(Math.floor(elapsed / 60))}
+          onClick={() => { clearSession(); onFinish(Math.floor(elapsed / 60)) }}
           className="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-2xl"
         >
           Concluir treino ✓
         </button>
-        <button onClick={onCancel} className="px-4 bg-slate-100 text-slate-600 font-bold py-3 rounded-2xl">
+        <button onClick={() => { clearSession(); onCancel() }} className="px-4 bg-slate-100 text-slate-600 font-bold py-3 rounded-2xl">
           Sair
         </button>
       </div>
@@ -374,8 +404,14 @@ export default function TreinoView() {
   const [activeSession, setActiveSession] = useState(null)
 
   useEffect(() => {
-    setPlanos(loadPlanos())
+    const planosData = loadPlanos()
+    setPlanos(planosData)
     setLogs(loadLogs())
+    // Restore active session if user switched tabs mid-workout
+    const saved = loadSession()
+    if (saved?.plano) {
+      setActiveSession(saved.plano)
+    }
   }, [])
 
   const todayPlano = getTodayPlano(planos)
