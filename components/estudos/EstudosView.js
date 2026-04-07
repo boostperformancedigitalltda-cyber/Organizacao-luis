@@ -21,6 +21,29 @@ import {
 } from '@/lib/disponibilidade'
 import { gerarPlanoSemanal, aplicarPlano } from '@/lib/planejador'
 
+// ── AI helpers ────────────────────────────────────────────────────────────────
+async function aiProcessarCronograma(materiaNome, texto) {
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'processar-cronograma', payload: { materiaNome, texto } }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Erro na IA')
+  return data.topicos
+}
+
+async function aiGerarPlano(payload) {
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'gerar-plano', payload }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Erro na IA')
+  return data
+}
+
 const COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#14b8a6','#a855f7']
 
 const FASES = ['pré-clínico', 'clínico', 'internato', 'residência', '']
@@ -424,6 +447,96 @@ function TodayTab({ materias, blocks, setBlocks }) {
   )
 }
 
+// ── Cronograma Modal (AI) ─────────────────────────────────────────────────────
+function CronogramaModal({ materia, onImport, onClose }) {
+  const [texto, setTexto] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const [erro, setErro] = useState('')
+
+  async function handleProcessar() {
+    if (!texto.trim()) return
+    setLoading(true)
+    setErro('')
+    try {
+      const topicos = await aiProcessarCronograma(materia.name, texto)
+      setPreview(topicos)
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-white rounded-t-2xl shadow-xl animate-slideUp flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 pb-3 flex-shrink-0">
+          <div>
+            <h2 className="font-bold text-slate-800 text-lg">Importar cronograma</h2>
+            <p className="text-xs text-slate-400">{materia.icon} {materia.name}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
+          {!preview ? (
+            <>
+              <p className="text-xs text-slate-500">Cole o cronograma, ementa ou conteúdo programático abaixo. A IA vai extrair os tópicos automaticamente.</p>
+              <textarea
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                placeholder={`Ex:\nSemana 1 — Semiologia cardiovascular\nSemana 2 — HAS e cardiopatias isquêmicas\nSemana 3 — Insuficiência cardíaca\n...`}
+                rows={10}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400 resize-none"
+              />
+              {erro && <p className="text-xs text-red-500 font-medium">{erro}</p>}
+              <button
+                onClick={handleProcessar}
+                disabled={!texto.trim() || loading}
+                className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processando com IA...
+                  </>
+                ) : (
+                  '✨ Processar com IA'
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-slate-500 font-semibold">{preview.length} tópicos encontrados — revise e confirme:</p>
+              <div className="space-y-1.5">
+                {preview.map((t, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
+                    <span className="text-indigo-400 font-black text-sm w-5 text-center">{i + 1}</span>
+                    <span className="flex-1 text-sm text-slate-700 font-medium">{t.titulo}</span>
+                    <span className="text-xs text-slate-400 flex-shrink-0">{t.horas}h</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => { onImport(preview); onClose() }}
+                  className="flex-1 py-3 bg-emerald-500 text-white font-bold rounded-xl"
+                >
+                  ✅ Importar tópicos
+                </button>
+                <button onClick={() => setPreview(null)} className="px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-sm">
+                  Voltar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Matérias Tab ──────────────────────────────────────────────────────────────
 function MateriasTab({ materias, setMaterias, blocks, setBlocks }) {
   const [showAdd, setShowAdd] = useState(false)
@@ -431,6 +544,7 @@ function MateriasTab({ materias, setMaterias, blocks, setBlocks }) {
   const [expanded, setExpanded] = useState(null)
   const [newTopic, setNewTopic] = useState('')
   const [filterFase, setFilterFase] = useState('')
+  const [cronogramaFor, setCronogramaFor] = useState(null)
 
   const fases = [...new Set(materias.map((m) => m.fase).filter(Boolean))]
   const filtered = filterFase ? materias.filter((m) => m.fase === filterFase) : materias
@@ -512,6 +626,7 @@ function MateriasTab({ materias, setMaterias, blocks, setBlocks }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <button onClick={() => setCronogramaFor(m)} className="text-slate-300 hover:text-indigo-400 text-sm" title="Importar cronograma com IA">✨</button>
                   <button onClick={() => setEditMat(m)} className="text-slate-300 hover:text-indigo-400">✏️</button>
                   <button onClick={() => { if(confirm('Remover matéria?')) { const r = removeMateria(materias, blocks, m.id); setMaterias(r.materias); setBlocks(r.blocks); if(expanded===m.id) setExpanded(null) }}} className="text-slate-300 hover:text-red-400">🗑️</button>
                   <button onClick={() => setExpanded(isOpen ? null : m.id)}
@@ -587,6 +702,20 @@ function MateriasTab({ materias, setMaterias, blocks, setBlocks }) {
 
       {showAdd && <MateriaModal onSave={(d) => { setMaterias(addMateria(materias, d)); setShowAdd(false) }} onClose={() => setShowAdd(false)} />}
       {editMat && <MateriaModal initial={editMat} onSave={(d) => { setMaterias(updateMateria(materias, editMat.id, d)); setEditMat(null) }} onClose={() => setEditMat(null)} />}
+      {cronogramaFor && (
+        <CronogramaModal
+          materia={cronogramaFor}
+          onImport={(topicos) => {
+            let updated = materias
+            topicos.forEach((t) => {
+              updated = addTopic(updated, cronogramaFor.id, t.titulo)
+            })
+            setMaterias(updated)
+            setCronogramaFor(null)
+          }}
+          onClose={() => setCronogramaFor(null)}
+        />
+      )}
     </div>
   )
 }
@@ -827,6 +956,9 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
   const [aulas, setAulas] = useState([])
   const [secao, setSecao] = useState('provas') // provas | aulas | horarios | gerar
   const [planoGerado, setPlanoGerado] = useState([])
+  const [resumoIA, setResumoIA] = useState('')
+  const [loadingIA, setLoadingIA] = useState(false)
+  const [erroIA, setErroIA] = useState('')
   const [showAddProva, setShowAddProva] = useState(false)
   const [showAddAula, setShowAddAula] = useState(false)
   const [novaProva, setNovaProva] = useState({ materiaId: '', titulo: '', data: '', tipo: 'prova' })
@@ -840,10 +972,38 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
 
   const DAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
-  function handleGerar() {
+  function handleGerarLocal() {
     const propostos = gerarPlanoSemanal({ materias, provas, simulados, disponibilidade, aulas, diasAVista: 7 })
     setPlanoGerado(propostos)
+    setResumoIA('')
     setSecao('gerar')
+  }
+
+  async function handleGerarIA() {
+    setLoadingIA(true)
+    setErroIA('')
+    setSecao('gerar')
+    try {
+      const resultado = await aiGerarPlano({ materias, provas, simulados, disponibilidade, aulas, diasAVista: 7 })
+      // Converte os blocos retornados pela IA para o formato interno
+      const blocos = (resultado.blocos || []).map((b) => ({
+        id: `ia-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        date: b.data,
+        materiaId: b.materiaId,
+        topic: b.topico || '',
+        startTime: b.startTime,
+        endTime: b.endTime,
+        completed: false,
+        note: b.justificativa || '',
+        _proposed: true,
+      }))
+      setPlanoGerado(blocos)
+      setResumoIA(resultado.resumo || '')
+    } catch (e) {
+      setErroIA(e.message)
+    } finally {
+      setLoadingIA(false)
+    }
   }
 
   function handleAplicar() {
@@ -1084,18 +1244,18 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
       {/* ── GERAR PLANO ── */}
       {secao === 'gerar' && (
         <div>
-          {planoGerado.length === 0 ? (
+          {planoGerado.length === 0 && !loadingIA ? (
             <div>
               <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-4">
                 <p className="text-sm font-bold text-indigo-800 mb-1">✨ Gerador de plano semanal</p>
-                <p className="text-xs text-indigo-600">O app vai distribuir seus blocos de estudo nos próximos 7 dias, priorizando automaticamente:</p>
-                <ul className="mt-2 space-y-1">
+                <p className="text-xs text-indigo-600 mb-2">Prioriza automaticamente:</p>
+                <ul className="space-y-1">
                   {[
                     `${provasProximas.length} prova(s) cadastrada(s)`,
                     `${aulas.length} aula(s) fixas — serão evitadas`,
                     'Matérias com simulado fraco',
                     'Matérias defasadas na meta semanal',
-                    'Revisões espaçadas pendentes',
+                    'Tópicos pendentes do cronograma',
                   ].map((item, i) => (
                     <li key={i} className="text-xs text-indigo-700 flex items-center gap-1.5">
                       <span className="text-indigo-400">•</span> {item}
@@ -1104,23 +1264,51 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
                 </ul>
               </div>
 
+              {erroIA && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                  <p className="text-xs text-red-600 font-semibold">Erro: {erroIA}</p>
+                  {erroIA.includes('ANTHROPIC_API_KEY') && (
+                    <p className="text-xs text-red-500 mt-1">Crie o arquivo <strong>.env.local</strong> com sua chave da Anthropic e reinicie o servidor.</p>
+                  )}
+                </div>
+              )}
+
               {materias.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
                   <p className="text-sm">Cadastre matérias primeiro na aba Matérias.</p>
                 </div>
               ) : (
-                <button onClick={handleGerar}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl text-base shadow-sm transition-all active:scale-95">
-                  ✨ Gerar plano da semana
-                </button>
+                <div className="space-y-3">
+                  <button onClick={handleGerarIA}
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl text-base shadow-sm transition-all active:scale-95">
+                    🤖 Gerar com IA (recomendado)
+                  </button>
+                  <button onClick={handleGerarLocal}
+                    className="w-full py-3 border-2 border-slate-200 text-slate-500 font-semibold rounded-2xl text-sm hover:bg-slate-50 transition-all">
+                    ⚙️ Gerar sem IA (algoritmo local)
+                  </button>
+                </div>
               )}
+            </div>
+          ) : loadingIA ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              <p className="text-sm font-semibold text-slate-600">IA analisando seus dados...</p>
+              <p className="text-xs text-slate-400 text-center">Verificando provas, simulados, metas e horários disponíveis</p>
             </div>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-bold text-slate-700">{planoGerado.length} blocos gerados</p>
-                <button onClick={() => setPlanoGerado([])} className="text-xs text-slate-400 hover:text-slate-600">Refazer</button>
+                <button onClick={() => { setPlanoGerado([]); setResumoIA(''); setErroIA('') }} className="text-xs text-slate-400 hover:text-slate-600">Refazer</button>
               </div>
+
+              {resumoIA && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 mb-3">
+                  <p className="text-xs font-bold text-indigo-700 mb-1">🤖 Raciocínio da IA</p>
+                  <p className="text-xs text-indigo-700 leading-relaxed">{resumoIA}</p>
+                </div>
+              )}
 
               <div className="space-y-2 mb-4">
                 {planoGerado.map((b) => {
@@ -1137,8 +1325,9 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
                           {d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
                         </p>
                         <p className="text-sm font-bold text-slate-800 truncate">{mat?.name || 'Matéria'}</p>
-                        {b.topic && <p className="text-xs text-slate-500 truncate">{b.topic}</p>}
+                        {b.topic && <p className="text-xs text-slate-600 font-medium truncate">{b.topic}</p>}
                         <p className="text-xs text-slate-400 mt-0.5">{b.startTime} – {b.endTime}</p>
+                        {b.note && <p className="text-[10px] text-indigo-400 mt-0.5 truncate">{b.note}</p>}
                       </div>
                       <button onClick={() => setPlanoGerado(planoGerado.filter((x) => x.id !== b.id))}
                         className="text-slate-200 hover:text-red-400 text-xs mt-1">✕</button>
