@@ -11,6 +11,15 @@ import {
   seedMateriasMedicina, DEFAULT_ICONS,
 } from '@/lib/estudos'
 import { dateKey } from '@/lib/date'
+import {
+  loadProvas, addProva, removeProva, diasAteProva, getTipoProva, TIPOS_PROVA,
+} from '@/lib/provas'
+import {
+  loadDisponibilidade, saveDisponibilidade, updateSlot, addSlot, removeSlot,
+  getTotalMinByDow, DAY_NAMES,
+  loadAulas, saveAulas, addAula, removeAula,
+} from '@/lib/disponibilidade'
+import { gerarPlanoSemanal, aplicarPlano } from '@/lib/planejador'
 
 const COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#14b8a6','#a855f7']
 
@@ -811,6 +820,345 @@ function ProgressTab({ materias, blocks, simulados }) {
   )
 }
 
+// ── Plano Tab ─────────────────────────────────────────────────────────────────
+function PlanoTab({ materias, simulados, blocks, setBlocks }) {
+  const [provas, setProvas] = useState([])
+  const [disponibilidade, setDisponibilidade] = useState([])
+  const [aulas, setAulas] = useState([])
+  const [secao, setSecao] = useState('provas') // provas | aulas | horarios | gerar
+  const [planoGerado, setPlanoGerado] = useState([])
+  const [showAddProva, setShowAddProva] = useState(false)
+  const [showAddAula, setShowAddAula] = useState(false)
+  const [novaProva, setNovaProva] = useState({ materiaId: '', titulo: '', data: '', tipo: 'prova' })
+  const [novaAula, setNovaAula] = useState({ dow: 0, nome: '', start: '07:00', end: '09:00', local: '' })
+
+  useEffect(() => {
+    setProvas(loadProvas())
+    setDisponibilidade(loadDisponibilidade())
+    setAulas(loadAulas())
+  }, [])
+
+  const DAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+
+  function handleGerar() {
+    const propostos = gerarPlanoSemanal({ materias, provas, simulados, disponibilidade, aulas, diasAVista: 7 })
+    setPlanoGerado(propostos)
+    setSecao('gerar')
+  }
+
+  function handleAplicar() {
+    const updated = aplicarPlano(planoGerado)
+    setBlocks(updated)
+    setPlanoGerado([])
+    alert(`✅ ${planoGerado.length} blocos adicionados ao seu Hoje!`)
+  }
+
+  const provasProximas = provas.filter((p) => p.data >= new Date().toISOString().slice(0, 10))
+
+  return (
+    <div>
+      {/* Seção nav */}
+      <div className="flex gap-1.5 mb-4 bg-slate-100 p-1 rounded-2xl">
+        {[
+          { id: 'provas',   label: 'Provas',    icon: '📋' },
+          { id: 'aulas',    label: 'Aulas',     icon: '🏫' },
+          { id: 'horarios', label: 'Horários',  icon: '⏰' },
+          { id: 'gerar',    label: 'Plano',     icon: '✨' },
+        ].map((s) => (
+          <button key={s.id} onClick={() => setSecao(s.id)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all ${secao === s.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
+            <span className="text-sm">{s.icon}</span>
+            <span>{s.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── PROVAS ── */}
+      {secao === 'provas' && (
+        <div>
+          {provasProximas.length === 0 && (
+            <div className="text-center py-8 text-slate-400">
+              <div className="text-3xl mb-2">📋</div>
+              <p className="text-sm">Nenhuma prova cadastrada.</p>
+              <p className="text-xs mt-1">Adicione suas provas para priorizar o estudo.</p>
+            </div>
+          )}
+          <div className="space-y-2 mb-4">
+            {provasProximas.map((p) => {
+              const mat = materias.find((m) => m.id === p.materiaId)
+              const tipo = getTipoProva(p.tipo)
+              const dias = diasAteProva(p.data)
+              const urgente = dias <= 7
+              return (
+                <div key={p.id} className={`bg-white rounded-2xl p-4 shadow-card border ${urgente ? 'border-red-200' : 'border-slate-100'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                      style={{ background: tipo.color + '20' }}>
+                      {tipo.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 text-sm">{p.titulo}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {mat && <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ background: mat.color }}>{mat.icon} {mat.name}</span>}
+                        <span className="text-xs text-slate-400">{new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-lg font-black ${urgente ? 'text-red-500' : dias <= 14 ? 'text-amber-500' : 'text-slate-600'}`}>{dias}d</p>
+                      <button onClick={() => setProvas(removeProva(provas, p.id))} className="text-slate-200 hover:text-red-400 text-xs">✕</button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {showAddProva ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+              <p className="text-sm font-bold text-slate-700">Nova prova</p>
+              <input value={novaProva.titulo} onChange={(e) => setNovaProva({ ...novaProva, titulo: e.target.value })}
+                placeholder="Nome da prova / avaliação"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-slate-500 block mb-1">Data</label>
+                  <input type="date" value={novaProva.data} onChange={(e) => setNovaProva({ ...novaProva, data: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-slate-500 block mb-1">Tipo</label>
+                  <select value={novaProva.tipo} onChange={(e) => setNovaProva({ ...novaProva, tipo: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
+                    {TIPOS_PROVA.map((t) => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 block mb-1">Matéria (opcional)</label>
+                <select value={novaProva.materiaId} onChange={(e) => setNovaProva({ ...novaProva, materiaId: e.target.value })}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
+                  <option value="">Geral / múltiplas matérias</option>
+                  {materias.map((m) => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { if (novaProva.data && novaProva.titulo) { setProvas(addProva(provas, novaProva)); setNovaProva({ materiaId: '', titulo: '', data: '', tipo: 'prova' }); setShowAddProva(false) }}}
+                  className="flex-1 bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-sm">Salvar</button>
+                <button onClick={() => setShowAddProva(false)} className="px-4 bg-slate-100 text-slate-600 font-bold py-2.5 rounded-xl text-sm">Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddProva(true)}
+              className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 font-semibold py-3 rounded-2xl hover:bg-indigo-50 transition-colors text-sm">
+              + Adicionar prova
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── AULAS ── */}
+      {secao === 'aulas' && (
+        <div>
+          <p className="text-xs text-slate-400 mb-3">Cadastre seus horários fixos de aula. O planejador vai evitar esses horários automaticamente.</p>
+
+          {aulas.length === 0 && !showAddAula && (
+            <div className="text-center py-8 text-slate-400">
+              <div className="text-3xl mb-2">🏫</div>
+              <p className="text-sm">Nenhuma aula cadastrada.</p>
+            </div>
+          )}
+
+          {/* Aulas agrupadas por dia */}
+          <div className="space-y-3 mb-4">
+            {DAY_SHORT.map((dayLabel, dow) => {
+              const aulasDia = aulas.filter((a) => a.dow === dow)
+              if (aulasDia.length === 0) return null
+              return (
+                <div key={dow} className="bg-white rounded-2xl shadow-card overflow-hidden">
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <p className="text-xs font-bold text-slate-600">{DAY_NAMES[dow]}</p>
+                  </div>
+                  <div className="divide-y divide-slate-50">
+                    {aulasDia.map((a) => (
+                      <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+                        <span className="text-base">🏫</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{a.nome}</p>
+                          <p className="text-xs text-slate-400">{a.start} – {a.end}{a.local ? ` · ${a.local}` : ''}</p>
+                        </div>
+                        <button onClick={() => setAulas(removeAula(aulas, a.id))} className="text-slate-200 hover:text-red-400 text-xs">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {showAddAula ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+              <p className="text-sm font-bold text-slate-700">Nova aula</p>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 block mb-1">Dia da semana</label>
+                <div className="flex gap-1 flex-wrap">
+                  {DAY_SHORT.map((d, i) => (
+                    <button key={i} onClick={() => setNovaAula({ ...novaAula, dow: i })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${novaAula.dow === i ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input value={novaAula.nome} onChange={(e) => setNovaAula({ ...novaAula, nome: e.target.value })}
+                placeholder="Nome da disciplina / aula"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-slate-500 block mb-1">Início</label>
+                  <input type="time" value={novaAula.start} onChange={(e) => setNovaAula({ ...novaAula, start: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs font-semibold text-slate-500 block mb-1">Fim</label>
+                  <input type="time" value={novaAula.end} onChange={(e) => setNovaAula({ ...novaAula, end: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+                </div>
+              </div>
+              <input value={novaAula.local} onChange={(e) => setNovaAula({ ...novaAula, local: e.target.value })}
+                placeholder="Local / sala (opcional)"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { if (novaAula.nome && novaAula.start && novaAula.end) { setAulas(addAula(aulas, novaAula)); setNovaAula({ dow: 0, nome: '', start: '07:00', end: '09:00', local: '' }); setShowAddAula(false) }}}
+                  className="flex-1 bg-indigo-600 text-white font-bold py-2.5 rounded-xl text-sm">Salvar</button>
+                <button onClick={() => setShowAddAula(false)} className="px-4 bg-slate-100 text-slate-600 font-bold py-2.5 rounded-xl text-sm">Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddAula(true)}
+              className="w-full border-2 border-dashed border-indigo-200 text-indigo-500 font-semibold py-3 rounded-2xl hover:bg-indigo-50 transition-colors text-sm">
+              + Adicionar aula
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── HORÁRIOS LIVRES ── */}
+      {secao === 'horarios' && (
+        <div>
+          <p className="text-xs text-slate-400 mb-3">Defina os horários livres para estudo em cada dia. O planejador usará esses janelas para distribuir os blocos.</p>
+          <div className="space-y-3">
+            {disponibilidade.map((d) => (
+              <div key={d.dow} className="bg-white rounded-2xl shadow-card overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-600">{DAY_NAMES[d.dow]}</p>
+                  <p className="text-xs text-slate-400">{formatMin(getTotalMinByDow(disponibilidade, d.dow))} disponíveis</p>
+                </div>
+                <div className="px-4 py-3 space-y-2">
+                  {d.slots.length === 0 && (
+                    <p className="text-xs text-slate-400 italic">Sem horário livre.</p>
+                  )}
+                  {d.slots.map((s, si) => (
+                    <div key={si} className="flex items-center gap-2">
+                      <input type="time" value={s.start}
+                        onChange={(e) => setDisponibilidade(updateSlot(disponibilidade, d.dow, si, 'start', e.target.value))}
+                        className="flex-1 border border-slate-200 rounded-xl px-2 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
+                      <span className="text-slate-400 text-xs">até</span>
+                      <input type="time" value={s.end}
+                        onChange={(e) => setDisponibilidade(updateSlot(disponibilidade, d.dow, si, 'end', e.target.value))}
+                        className="flex-1 border border-slate-200 rounded-xl px-2 py-1.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
+                      <button onClick={() => setDisponibilidade(removeSlot(disponibilidade, d.dow, si))}
+                        className="text-slate-300 hover:text-red-400 text-xs w-7 h-7 flex items-center justify-center">✕</button>
+                    </div>
+                  ))}
+                  <button onClick={() => setDisponibilidade(addSlot(disponibilidade, d.dow))}
+                    className="text-xs text-indigo-500 font-semibold hover:text-indigo-600">+ janela</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── GERAR PLANO ── */}
+      {secao === 'gerar' && (
+        <div>
+          {planoGerado.length === 0 ? (
+            <div>
+              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 mb-4">
+                <p className="text-sm font-bold text-indigo-800 mb-1">✨ Gerador de plano semanal</p>
+                <p className="text-xs text-indigo-600">O app vai distribuir seus blocos de estudo nos próximos 7 dias, priorizando automaticamente:</p>
+                <ul className="mt-2 space-y-1">
+                  {[
+                    `${provasProximas.length} prova(s) cadastrada(s)`,
+                    `${aulas.length} aula(s) fixas — serão evitadas`,
+                    'Matérias com simulado fraco',
+                    'Matérias defasadas na meta semanal',
+                    'Revisões espaçadas pendentes',
+                  ].map((item, i) => (
+                    <li key={i} className="text-xs text-indigo-700 flex items-center gap-1.5">
+                      <span className="text-indigo-400">•</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {materias.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="text-sm">Cadastre matérias primeiro na aba Matérias.</p>
+                </div>
+              ) : (
+                <button onClick={handleGerar}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl text-base shadow-sm transition-all active:scale-95">
+                  ✨ Gerar plano da semana
+                </button>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold text-slate-700">{planoGerado.length} blocos gerados</p>
+                <button onClick={() => setPlanoGerado([])} className="text-xs text-slate-400 hover:text-slate-600">Refazer</button>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {planoGerado.map((b) => {
+                  const mat = materias.find((m) => m.id === b.materiaId)
+                  const d = new Date(b.date + 'T12:00:00')
+                  return (
+                    <div key={b.id} className="bg-white rounded-2xl p-3.5 shadow-card border border-slate-100 flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+                        style={{ background: (mat?.color || '#6366f1') + '20' }}>
+                        {mat?.icon || '📚'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-indigo-600">
+                          {d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                        </p>
+                        <p className="text-sm font-bold text-slate-800 truncate">{mat?.name || 'Matéria'}</p>
+                        {b.topic && <p className="text-xs text-slate-500 truncate">{b.topic}</p>}
+                        <p className="text-xs text-slate-400 mt-0.5">{b.startTime} – {b.endTime}</p>
+                      </div>
+                      <button onClick={() => setPlanoGerado(planoGerado.filter((x) => x.id !== b.id))}
+                        className="text-slate-200 hover:text-red-400 text-xs mt-1">✕</button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <button onClick={handleAplicar}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl text-base shadow-sm transition-all active:scale-95">
+                ✅ Aplicar ao Hoje ({planoGerado.length} blocos)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function EstudosView() {
   const [subTab, setSubTab] = useState('hoje')
@@ -830,6 +1178,7 @@ export default function EstudosView() {
     { id: 'hoje',      label: 'Hoje',      icon: '📅' },
     { id: 'materias',  label: 'Matérias',  icon: '📚' },
     { id: 'simulados', label: 'Simulados', icon: '📝' },
+    { id: 'plano',     label: 'Plano',     icon: '✨' },
     { id: 'progresso', label: 'Progresso', icon: '📊' },
   ]
 
@@ -844,12 +1193,12 @@ export default function EstudosView() {
         </p>
       </div>
 
-      <div className="flex gap-1.5 mb-5 bg-slate-100 p-1 rounded-2xl">
+      <div className="flex gap-1 mb-5 bg-slate-100 p-1 rounded-2xl overflow-x-auto">
         {SUB_TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all ${
+            className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all ${
               subTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
             }`}
           >
@@ -862,6 +1211,7 @@ export default function EstudosView() {
       {subTab === 'hoje' && <TodayTab materias={materias} blocks={blocks} setBlocks={setBlocks} />}
       {subTab === 'materias' && <MateriasTab materias={materias} setMaterias={setMaterias} blocks={blocks} setBlocks={setBlocks} />}
       {subTab === 'simulados' && <SimuladosTab materias={materias} simulados={simulados} setSimulados={setSimulados} />}
+      {subTab === 'plano' && <PlanoTab materias={materias} simulados={simulados} blocks={blocks} setBlocks={setBlocks} />}
       {subTab === 'progresso' && <ProgressTab materias={materias} blocks={blocks} simulados={simulados} />}
     </div>
   )
