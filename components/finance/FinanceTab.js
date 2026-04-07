@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import AgenteFinanceiro from '@/components/ai/AgenteFinanceiro'
 import SummaryCards from './SummaryCards'
 import { MonthlyChart, CategoryPie, DailyChart } from './Charts'
 import TxList from './TxList'
@@ -188,6 +189,7 @@ export default function FinanceTab() {
   const [editGoal, setEditGoal] = useState(false)
   const [goalInput, setGoalInput] = useState('')
   const [showCatManager, setShowCatManager] = useState(false)
+  const [showAgente, setShowAgente] = useState(false)
 
   useEffect(() => {
     setTxs(loadTransactions())
@@ -246,6 +248,12 @@ export default function FinanceTab() {
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-xl font-bold text-slate-900">Finanças</h1>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowAgente(true)}
+            className="px-3 py-2 bg-emerald-100 text-emerald-700 text-sm font-semibold rounded-xl transition-colors hover:bg-emerald-200"
+          >
+            ✨ IA
+          </button>
           <button
             onClick={() => setShowCatManager(true)}
             className="px-3 py-2 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl transition-colors hover:bg-slate-200"
@@ -432,6 +440,7 @@ export default function FinanceTab() {
       {/* Modals */}
       <AddTxModal open={modal} onClose={() => setModal(false)} onAdd={handleAdd} />
       {showCatManager && <CategoryManager onClose={() => setShowCatManager(false)} />}
+      {showAgente && <AgenteFinanceiro onClose={() => setShowAgente(false)} />}
     </div>
   )
 }
