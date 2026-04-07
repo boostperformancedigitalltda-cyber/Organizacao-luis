@@ -45,7 +45,6 @@ function CategoryManager({ onClose }) {
   }
 
   function handlePackMedicina() {
-    const { set } = require('@/lib/storage')
     const novaCats = PACK_MEDICINA_CATS.map((item, i) => {
       const preset = presets.find((p) => p.color === item.color) || presets[i % presets.length]
       const id = item.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_med'

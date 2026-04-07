@@ -294,22 +294,23 @@ export default function Home() {
       }
       // Auto-sync: estudo block done → mark study block done (cria se não existe)
       if (block?.category === 'estudo' && block?.materiaId) {
-        const allStudy = loadStudyBlocks()
+        let allStudy = loadStudyBlocks()
         const todayStudy = getBlocksForDate(allStudy, dk)
-        const match = todayStudy.find((sb) => sb.materiaId === block.materiaId)
+        const match = todayStudy.find((sb) => sb.materiaId === block.materiaId && sb.startTime === block.startTime)
         if (match) {
           if (!match.completed) toggleStudyBlock(allStudy, match.id)
         } else {
-          // Cria o bloco e já marca como concluído
+          // Cria o bloco já marcado como concluído
           const created = addStudyBlock(allStudy, {
             date: dk,
             materiaId: block.materiaId,
             topic: block.note || '',
             startTime: block.startTime,
             endTime: block.endTime,
+            completed: true,
           })
-          const newBlock = created[0]
-          toggleStudyBlock(created, newBlock.id)
+          // toggleStudyBlock não é necessário — já criou como completed
+          void created
         }
       }
     }
@@ -331,12 +332,11 @@ export default function Home() {
     // Auto-criar bloco de estudo na aba Estudos ao adicionar bloco com matéria
     if (!isEdit && block.category === 'estudo' && block.materiaId) {
       const allStudy = loadStudyBlocks()
-      // Evita duplicar se já existe bloco para essa matéria nesse dia/horário
       const exists = getBlocksForDate(allStudy, dk).some(
         (sb) => sb.materiaId === block.materiaId && sb.startTime === block.startTime
       )
       if (!exists) {
-        addStudyBlock(allStudy, {
+        void addStudyBlock(allStudy, {
           date: dk,
           materiaId: block.materiaId,
           topic: block.note || '',
