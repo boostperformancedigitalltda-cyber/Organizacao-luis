@@ -8,6 +8,7 @@ import {
   removeStudyBlock, updateStudyBlock, getWeeklyStats, formatMin,
   loadSimulados, addSimulado, removeSimulado, getSimuladoStats,
   getQuestoesDia, setQuestoesDia,
+  loadBancoErros, addErro, toggleErroDominado, removeErro, getErroPadroes,
   seedMateriasMedicina, DEFAULT_ICONS,
 } from '@/lib/estudos'
 import { dateKey } from '@/lib/date'
@@ -883,6 +884,9 @@ function ProgressTab({ materias, blocks, simulados }) {
         </div>
       </div>
 
+      {/* Mapa de calor */}
+      <MapaCalor blocks={blocks} materias={materias} />
+
       {/* Semana geral */}
       <div className="bg-white rounded-2xl p-4 shadow-card">
         <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Semana atual</p>
@@ -1348,6 +1352,241 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
   )
 }
 
+// ── Banco de Erros Tab ────────────────────────────────────────────────────────
+function BancoErrosTab({ materias, simulados }) {
+  const [erros, setErros] = useState(() => loadBancoErros())
+  const [filterMat, setFilterMat] = useState('')
+  const [showDominados, setShowDominados] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [novoErro, setNovoErro] = useState({ materiaId: '', tema: '', enunciado: '', gabarito: '', fonte: '' })
+
+  const padroes = getErroPadroes(erros, materias)
+  const filtered = erros
+    .filter((e) => !filterMat || e.materiaId === filterMat)
+    .filter((e) => showDominados || !e.dominado)
+
+  const totalAtivos = erros.filter((e) => !e.dominado).length
+  const totalDominados = erros.filter((e) => e.dominado).length
+
+  function handleAdd() {
+    if (!novoErro.tema && !novoErro.enunciado) return
+    setErros(addErro(erros, novoErro))
+    setNovoErro({ materiaId: '', tema: '', enunciado: '', gabarito: '', fonte: '' })
+    setShowAdd(false)
+  }
+
+  return (
+    <div>
+      {/* Resumo */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-white rounded-2xl p-3 shadow-card text-center border border-red-100">
+          <p className="text-xl font-black text-red-500">{totalAtivos}</p>
+          <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Pendentes</p>
+        </div>
+        <div className="bg-white rounded-2xl p-3 shadow-card text-center border border-emerald-100">
+          <p className="text-xl font-black text-emerald-500">{totalDominados}</p>
+          <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Dominados</p>
+        </div>
+        <div className="bg-white rounded-2xl p-3 shadow-card text-center">
+          <p className="text-xl font-black text-slate-700">{erros.length}</p>
+          <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Total</p>
+        </div>
+      </div>
+
+      {/* Padrões de erro */}
+      {padroes.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">⚠ Padrões identificados</p>
+          <div className="space-y-2">
+            {padroes.slice(0, 3).map(({ materia, count, topTemas }) => (
+              <div key={materia?.id || 'geral'} className="flex items-start gap-2">
+                <span className="text-base">{materia?.icon || '📝'}</span>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-amber-800">{materia?.name || 'Geral'} — {count} erro{count > 1 ? 's' : ''}</p>
+                  {topTemas.length > 0 && (
+                    <p className="text-[10px] text-amber-600">{topTemas.map((t) => `${t.tema} (${t.count})`).join(' · ')}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+        <button onClick={() => setFilterMat('')}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${!filterMat ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+          Todos
+        </button>
+        {materias.map((m) => (
+          <button key={m.id} onClick={() => setFilterMat(m.id)}
+            className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filterMat === m.id ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+            {m.icon} {m.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-slate-400">{filtered.length} questão(ões)</p>
+        <button onClick={() => setShowDominados(!showDominados)}
+          className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all ${showDominados ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+          {showDominados ? '✓ Mostrando dominados' : 'Mostrar dominados'}
+        </button>
+      </div>
+
+      {/* Lista */}
+      <div className="space-y-2 mb-4">
+        {filtered.length === 0 && (
+          <div className="text-center py-10 text-slate-400">
+            <div className="text-3xl mb-2">✅</div>
+            <p className="text-sm font-semibold text-slate-600">
+              {totalAtivos === 0 ? 'Nenhum erro pendente!' : 'Nenhum erro nessa matéria'}
+            </p>
+          </div>
+        )}
+        {filtered.map((e) => {
+          const mat = materias.find((m) => m.id === e.materiaId)
+          return (
+            <div key={e.id} className={`bg-white rounded-2xl p-4 shadow-card border transition-all ${e.dominado ? 'border-emerald-100 opacity-60' : 'border-red-100'}`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${e.dominado ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                  {e.dominado ? '✓' : '✗'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {mat && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: mat.color }}>{mat.icon} {mat.name}</span>}
+                    {e.tema && <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{e.tema}</span>}
+                    {e.fonte && <span className="text-[10px] text-slate-400">{e.fonte}</span>}
+                  </div>
+                  {e.enunciado && <p className="text-sm text-slate-700 mb-1 line-clamp-3">{e.enunciado}</p>}
+                  {e.gabarito && (
+                    <p className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                      Gabarito: {e.gabarito}
+                    </p>
+                  )}
+                  {e.revisoes > 0 && <p className="text-[10px] text-slate-400 mt-1">{e.revisoes} revisão(ões)</p>}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => setErros(toggleErroDominado(erros, e.id))}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${e.dominado ? 'bg-slate-100 text-slate-600' : 'bg-emerald-500 text-white'}`}>
+                  {e.dominado ? 'Reabrir' : '✓ Dominei'}
+                </button>
+                <button onClick={() => { if (confirm('Remover?')) setErros(removeErro(erros, e.id)) }}
+                  className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-all">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Add manual */}
+      {showAdd ? (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 mb-4">
+          <p className="text-sm font-bold text-slate-700">Adicionar erro</p>
+          <select value={novoErro.materiaId} onChange={(e) => setNovoErro({ ...novoErro, materiaId: e.target.value })}
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
+            <option value="">Matéria (opcional)</option>
+            {materias.map((m) => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
+          </select>
+          <input value={novoErro.tema} onChange={(e) => setNovoErro({ ...novoErro, tema: e.target.value })}
+            placeholder="Tema / assunto (ex: Cardiologia, ECG)"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+          <textarea value={novoErro.enunciado} onChange={(e) => setNovoErro({ ...novoErro, enunciado: e.target.value })}
+            placeholder="Enunciado ou descrição da questão (opcional)"
+            rows={3}
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400 resize-none" />
+          <input value={novoErro.gabarito} onChange={(e) => setNovoErro({ ...novoErro, gabarito: e.target.value })}
+            placeholder="Gabarito / resposta correta"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+          <input value={novoErro.fonte} onChange={(e) => setNovoErro({ ...novoErro, fonte: e.target.value })}
+            placeholder="Fonte (ex: Revalida 2023, Residência USP)"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+          <div className="flex gap-2">
+            <button onClick={handleAdd} className="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl text-sm">Salvar erro</button>
+            <button onClick={() => setShowAdd(false)} className="px-4 bg-slate-100 text-slate-600 font-bold py-2.5 rounded-xl text-sm">Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setShowAdd(true)}
+          className="w-full border-2 border-dashed border-red-200 text-red-400 font-semibold py-3 rounded-2xl hover:bg-red-50 transition-colors text-sm">
+          + Adicionar erro manualmente
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Mapa de Calor (30 dias) ───────────────────────────────────────────────────
+function MapaCalor({ blocks, materias }) {
+  const days = Array.from({ length: 35 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - 34 + i)
+    return d.toISOString().slice(0, 10)
+  })
+
+  const maxMin = Math.max(1, ...days.map((dk) => {
+    const dayBlocks = blocks.filter((b) => b.date === dk && b.completed)
+    return dayBlocks.reduce((sum, b) => {
+      if (!b.startTime || !b.endTime) return sum
+      const [sh, sm] = b.startTime.split(':').map(Number)
+      const [eh, em] = b.endTime.split(':').map(Number)
+      return sum + Math.max(0, (eh * 60 + em) - (sh * 60 + sm))
+    }, 0)
+  }))
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-card">
+      <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Mapa de estudo — 35 dias</p>
+      <div className="grid grid-cols-7 gap-1">
+        {['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map((d) => (
+          <div key={d} className="text-center text-[9px] font-bold text-slate-400 pb-1">{d}</div>
+        ))}
+        {days.map((dk) => {
+          const dayBlocks = blocks.filter((b) => b.date === dk && b.completed)
+          const min = dayBlocks.reduce((sum, b) => {
+            if (!b.startTime || !b.endTime) return sum
+            const [sh, sm] = b.startTime.split(':').map(Number)
+            const [eh, em] = b.endTime.split(':').map(Number)
+            return sum + Math.max(0, (eh * 60 + em) - (sh * 60 + sm))
+          }, 0)
+          const intensity = min === 0 ? 0 : Math.min(1, min / maxMin)
+          const isToday = dk === today
+          const isFuture = dk > today
+
+          let bg = '#f1f5f9'
+          if (!isFuture && min > 0) {
+            const alpha = Math.round(40 + intensity * 215)
+            bg = `rgba(99,102,241,${(40 + intensity * 215) / 255})`
+          }
+
+          return (
+            <div
+              key={dk}
+              title={`${dk}: ${min > 0 ? Math.round(min) + 'min' : 'sem estudo'}`}
+              className={`aspect-square rounded-md transition-all ${isToday ? 'ring-2 ring-indigo-400' : ''}`}
+              style={{ background: isFuture ? 'transparent' : bg }}
+            />
+          )
+        })}
+      </div>
+      <div className="flex items-center justify-end gap-1 mt-2">
+        <span className="text-[9px] text-slate-400">Menos</span>
+        {[0.1, 0.3, 0.5, 0.7, 1].map((v) => (
+          <div key={v} className="w-3 h-3 rounded-sm" style={{ background: `rgba(99,102,241,${v})` }} />
+        ))}
+        <span className="text-[9px] text-slate-400">Mais</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Main View ─────────────────────────────────────────────────────────────────
 export default function EstudosView() {
   const [subTab, setSubTab] = useState('hoje')
@@ -1362,11 +1601,13 @@ export default function EstudosView() {
   }, [])
 
   const revisoesPendentes = getTopicsForReviewToday(materias).length
+  const errosPendentes = loadBancoErros().filter((e) => !e.dominado).length
 
   const SUB_TABS = [
     { id: 'hoje',      label: 'Hoje',      icon: '📅' },
     { id: 'materias',  label: 'Matérias',  icon: '📚' },
     { id: 'simulados', label: 'Simulados', icon: '📝' },
+    { id: 'erros',     label: 'Erros',     icon: '✗',  badge: errosPendentes },
     { id: 'plano',     label: 'Plano',     icon: '✨' },
     { id: 'progresso', label: 'Progresso', icon: '📊' },
   ]
@@ -1387,20 +1628,26 @@ export default function EstudosView() {
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all ${
+            className={`relative flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all ${
               subTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
             }`}
           >
             <span className="text-base leading-none">{t.icon}</span>
             <span>{t.label}</span>
+            {t.badge > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-bold min-w-[14px] h-3.5 px-0.5 rounded-full flex items-center justify-center">
+                {t.badge > 9 ? '9+' : t.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {subTab === 'hoje' && <TodayTab materias={materias} blocks={blocks} setBlocks={setBlocks} />}
-      {subTab === 'materias' && <MateriasTab materias={materias} setMaterias={setMaterias} blocks={blocks} setBlocks={setBlocks} />}
+      {subTab === 'hoje'      && <TodayTab materias={materias} blocks={blocks} setBlocks={setBlocks} />}
+      {subTab === 'materias'  && <MateriasTab materias={materias} setMaterias={setMaterias} blocks={blocks} setBlocks={setBlocks} />}
       {subTab === 'simulados' && <SimuladosTab materias={materias} simulados={simulados} setSimulados={setSimulados} />}
-      {subTab === 'plano' && <PlanoTab materias={materias} simulados={simulados} blocks={blocks} setBlocks={setBlocks} />}
+      {subTab === 'erros'     && <BancoErrosTab materias={materias} simulados={simulados} />}
+      {subTab === 'plano'     && <PlanoTab materias={materias} simulados={simulados} blocks={blocks} setBlocks={setBlocks} />}
       {subTab === 'progresso' && <ProgressTab materias={materias} blocks={blocks} simulados={simulados} />}
     </div>
   )
