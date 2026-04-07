@@ -7,7 +7,7 @@ const ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊', color: 'bg-blue-50    text-blue-600'    },
   { id: 'habitos',   label: 'Hábitos',   icon: '🌱', color: 'bg-emerald-50 text-emerald-600' },
   { id: 'metas',     label: 'Metas',     icon: '🎯', color: 'bg-indigo-50  text-indigo-600'  },
-  { id: 'semana',    label: 'Semana',    icon: '📆', color: 'bg-violet-50  text-violet-600'  },
+  { id: 'projetos',  label: 'Projetos',  icon: '🚀', color: 'bg-rose-50    text-rose-600'    },
   { id: 'rotina',    label: 'Rotina',    icon: '🔄', color: 'bg-cyan-50    text-cyan-600'    },
   { id: 'inbox',     label: 'Inbox',     icon: '⚡', color: 'bg-amber-50   text-amber-600'   },
 ]

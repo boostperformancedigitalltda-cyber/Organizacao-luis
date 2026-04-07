@@ -17,13 +17,15 @@ import MaisMenu from '@/components/ui/MaisMenu'
 import HabitsView from '@/components/habitos/HabitsView'
 import DashboardView from '@/components/dashboard/DashboardView'
 import { loadDayPlan, saveDayPlan, timeToMinutes, getRecurringForDate } from '@/lib/planner'
+import { loadAulas, getAulasByDow } from '@/lib/disponibilidade'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
 import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
 import { loadNotifSettings, scheduleAll, scheduleBlockNotifications, getPermission } from '@/lib/notifications'
 import { loadTasks, loadProjetos } from '@/lib/projetos'
 import { loadPlanos, getTodayPlano, loadLogs, addLog } from '@/lib/treino'
-import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock, addStudyBlock } from '@/lib/estudos'
+import { loadStudyBlocks, getBlocksForDate, toggleStudyBlock, addStudyBlock, loadMaterias } from '@/lib/estudos'
+import { syncRetroativo } from '@/lib/planejador'
 import { set as storageSet } from '@/lib/storage'
 import RoutineEditor from '@/components/rotina/RoutineEditor'
 
@@ -186,6 +188,11 @@ export default function Home() {
   const dk = dateKey(today)
 
   useEffect(() => {
+    // Sync retroativo: injeta study blocks e aulas em todos os planos diários
+    const allAulasSync = loadAulas()
+    const allMateriasSync = loadMaterias()
+    syncRetroativo(allMateriasSync, allAulasSync)
+
     const savedPlan = loadDayPlan(dk)
     // Inject recurring blocks not yet in today's plan
     const recurring = getRecurringForDate(dk)
@@ -196,6 +203,30 @@ export default function Home() {
         savedPlan.blocks = [...(savedPlan.blocks || []), ...novos]
       }
     }
+
+    // Inject aulas (fixed weekly classes) not yet in today's plan
+    const allAulas = loadAulas()
+    const todayDispDow = today.getDay() === 0 ? 6 : today.getDay() - 1
+    const todayAulas = getAulasByDow(allAulas, todayDispDow)
+    if (savedPlan && todayAulas.length > 0) {
+      const existingAulaIds = new Set((savedPlan.blocks || []).map((b) => b._aulaId).filter(Boolean))
+      const aulaBlocks = todayAulas
+        .filter((a) => !existingAulaIds.has(a.id))
+        .map((a) => ({
+          uid: `aula-${a.id}-${dk}`,
+          startTime: a.start,
+          endTime: a.end,
+          title: a.nome,
+          category: 'estudo',
+          icon: '🎓',
+          note: a.local ? `Local: ${a.local}` : '',
+          _aulaId: a.id,
+        }))
+      if (aulaBlocks.length > 0) {
+        savedPlan.blocks = [...(savedPlan.blocks || []), ...aulaBlocks]
+      }
+    }
+
     if (savedPlan?.blocks) {
       savedPlan.blocks = [...savedPlan.blocks].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
       saveDayPlan(dk, savedPlan)

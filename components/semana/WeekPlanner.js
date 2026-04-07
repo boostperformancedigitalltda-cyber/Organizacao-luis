@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react'
 import { startOfWeek, getWeekDays, dateKey, addDays, getWeekNumber, isSameDay } from '@/lib/date'
 import { loadDayPlan, saveDayPlan, getTemplateBlocks, calcProgress, getCatInfo, BLOCK_CATEGORIES } from '@/lib/planner'
+import { loadAulas, getAulasByDow } from '@/lib/disponibilidade'
+import { getRecurringForDate } from '@/lib/planner'
+import { loadMaterias } from '@/lib/estudos'
+import { syncRetroativo } from '@/lib/planejador'
 import Modal from '@/components/ui/Modal'
 
 const DAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -123,22 +127,90 @@ function DayPlanModal({ date, onClose }) {
   )
 }
 
+function toMin(t) {
+  if (!t) return 0
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
 // Expanded day detail panel
-function DayDetail({ date, plan, onPlanDay }) {
+function DayDetail({ date, plan, aulas, onPlanDay }) {
   const dk = dateKey(date)
   const isToday = isSameDay(date, today())
   const isPast  = date < today() && !isToday
   const { count, total, pct } = calcProgress(plan?.blocks || [], plan?.completed || {})
 
+  // JS getDay(): 0=Sun,1=Mon...6=Sat → disp dow: 0=Seg(Mon)...6=Dom(Sun)
+  const dispDow = date.getDay() === 0 ? 6 : date.getDay() - 1
+  const dayAulas = getAulasByDow(aulas, dispDow)
+
+  // Blocos recorrentes para este dia (que ainda não estão no plano)
+  const recurringBlocks = getRecurringForDate(dk)
+  const planRecIds = new Set((plan?.blocks || []).map((b) => b._recurringId).filter(Boolean))
+  const recurringExtra = recurringBlocks.filter((b) => !planRecIds.has(b._recurringId))
+
+  // Aulas extras (não no plano ainda)
+  const planAulaIds = new Set((plan?.blocks || []).map((b) => b._aulaId).filter(Boolean))
+  const aulaBlocksExtra = dayAulas
+    .filter((a) => !planAulaIds.has(a.id))
+    .map((a) => ({
+      uid: `aula-${a.id}`,
+      startTime: a.start,
+      endTime: a.end,
+      title: a.nome,
+      category: 'estudo',
+      icon: '🎓',
+      note: a.local || '',
+      _aulaId: a.id,
+    }))
+
+  // Todos os blocos visíveis: plano + aulas + recorrentes
+  const allBlocks = [
+    ...(plan?.blocks || []),
+    ...aulaBlocksExtra,
+    ...recurringExtra,
+  ].sort((a, b) => toMin(a.startTime) - toMin(b.startTime))
+
+  const hasAnything = allBlocks.length > 0
+
   if (!plan || !plan.planned) {
+    if (!hasAnything) {
+      return (
+        <div className="bg-slate-50 rounded-2xl p-5 text-center border border-slate-100 mt-2">
+          <p className="text-3xl mb-2">📋</p>
+          <p className="text-sm font-semibold text-slate-600 mb-1">Dia não planejado</p>
+          {!isPast && (
+            <button onClick={onPlanDay}
+              className="mt-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-xl transition-colors">
+              Planejar este dia →
+            </button>
+          )}
+        </div>
+      )
+    }
+    // Tem aulas/recorrentes mesmo sem plano explícito
     return (
-      <div className="bg-slate-50 rounded-2xl p-5 text-center border border-slate-100 mt-2">
-        <p className="text-3xl mb-2">📋</p>
-        <p className="text-sm font-semibold text-slate-600 mb-1">Dia não planejado</p>
+      <div className="mt-2 space-y-1.5">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide px-1">Blocos automáticos</p>
+        {allBlocks.map((block) => {
+          const cat = getCatInfo(block.category)
+          const isAula = !!block._aulaId
+          return (
+            <div key={block.uid}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border ${isAula ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-100 shadow-sm'}`}>
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cat.dot}`} />
+              <span className="text-sm">{block.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium truncate ${isAula ? 'text-indigo-700' : 'text-slate-700'}`}>{block.title}</p>
+              </div>
+              <span className="text-xs text-slate-400 flex-shrink-0">{block.startTime}</span>
+            </div>
+          )
+        })}
         {!isPast && (
           <button onClick={onPlanDay}
-            className="mt-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-xl transition-colors">
-            Planejar este dia →
+            className="w-full py-2 text-xs text-indigo-500 font-semibold hover:text-indigo-600 transition-colors">
+            ✏️ Planejar este dia
           </button>
         )}
       </div>
@@ -148,30 +220,39 @@ function DayDetail({ date, plan, onPlanDay }) {
   return (
     <div className="mt-2 space-y-1.5">
       {/* Progress mini bar */}
-      <div className="flex items-center gap-3 px-1 mb-3">
-        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-400'}`}
-            style={{ width: `${pct}%` }}
-          />
+      {plan?.planned && (
+        <div className="flex items-center gap-3 px-1 mb-3">
+          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-400'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="text-xs font-bold text-slate-500">{count}/{total}</span>
         </div>
-        <span className="text-xs font-bold text-slate-500">{count}/{total}</span>
-      </div>
+      )}
 
-      {(plan.blocks || []).map((block) => {
+      {allBlocks.map((block) => {
         const cat = getCatInfo(block.category)
-        const done = plan.completed?.[block.uid]
+        const done = plan?.completed?.[block.uid]
+        const isAula = !!block._aulaId
+        const isRecorrente = !!block._recurringId
         return (
           <div key={block.uid}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all ${
-              done ? 'bg-slate-50 border-slate-100 opacity-50' : 'bg-white border-slate-100 shadow-sm'
+              isAula
+                ? 'bg-indigo-50 border-indigo-100'
+                : isRecorrente
+                ? 'bg-slate-50 border-slate-100'
+                : done ? 'bg-slate-50 border-slate-100 opacity-50' : 'bg-white border-slate-100 shadow-sm'
             }`}>
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cat.dot}`} />
             <span className="text-sm">{block.icon}</span>
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium truncate ${done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+              <p className={`text-sm font-medium truncate ${done ? 'line-through text-slate-400' : isAula ? 'text-indigo-700' : 'text-slate-700'}`}>
                 {block.title}
               </p>
+              {isAula && block.note && <p className="text-[10px] text-indigo-400">{block.note}</p>}
             </div>
             <span className="text-xs text-slate-400 flex-shrink-0">{block.startTime}</span>
             {done && <span className="text-emerald-500 text-xs">✓</span>}
@@ -192,25 +273,31 @@ function DayDetail({ date, plan, onPlanDay }) {
 export default function WeekPlanner() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(today()))
   const [plans, setPlans] = useState({})
+  const [aulas, setAulas] = useState([])
   const [expanded, setExpanded] = useState(() => dateKey(today()))
   const [planningDay, setPlanningDay] = useState(null)
 
   const days = getWeekDays(weekStart)
 
-  // Load plans for all 7 days
-  useEffect(() => {
+  const reload = (currentDays = days) => {
     const loaded = {}
-    days.forEach((d) => {
-      loaded[dateKey(d)] = loadDayPlan(dateKey(d))
-    })
-    setPlans(loaded)
-  }, [weekStart]) // eslint-disable-line
-
-  const reload = () => {
-    const loaded = {}
-    days.forEach((d) => { loaded[dateKey(d)] = loadDayPlan(dateKey(d)) })
+    currentDays.forEach((d) => { loaded[dateKey(d)] = loadDayPlan(dateKey(d)) })
     setPlans(loaded)
   }
+
+  // Load aulas, run sync retroativo, then reload plans
+  useEffect(() => {
+    const aulasLoaded = loadAulas()
+    const materiasLoaded = loadMaterias()
+    setAulas(aulasLoaded)
+    syncRetroativo(materiasLoaded, aulasLoaded)
+    reload()
+  }, []) // eslint-disable-line
+
+  // Reload plans when week changes
+  useEffect(() => {
+    reload()
+  }, [weekStart]) // eslint-disable-line
 
   const prevWeek = () => setWeekStart((w) => addDays(w, -7))
   const nextWeek = () => setWeekStart((w) => addDays(w, 7))
@@ -311,6 +398,7 @@ export default function WeekPlanner() {
             <DayDetail
               date={day}
               plan={plan}
+              aulas={aulas}
               onPlanDay={() => setPlanningDay(day)}
             />
           </div>

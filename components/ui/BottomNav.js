@@ -1,16 +1,16 @@
 'use client'
 
 const TABS = [
-  { id: 'hoje',     label: 'Hoje',     icon: '📅' },
-  { id: 'estudos',  label: 'Estudos',  icon: '📚' },
-  { id: 'treino',   label: 'Treino',   icon: '💪' },
-  { id: 'projetos', label: 'Projetos', icon: '🚀' },
-  { id: 'financas', label: 'Finanças', icon: '💰' },
-  { id: 'mais',     label: 'Mais',     icon: '⋯'  },
+  { id: 'hoje',    label: 'Hoje',    icon: '📅' },
+  { id: 'estudos', label: 'Estudos', icon: '📚' },
+  { id: 'semana',  label: 'Semana',  icon: '🗓️' },
+  { id: 'treino',  label: 'Treino',  icon: '💪' },
+  { id: 'financas',label: 'Finanças',icon: '💰' },
+  { id: 'mais',    label: 'Mais',    icon: '⋯'  },
 ]
 
 export default function BottomNav({ active, onChange, pendingInbox = 0 }) {
-  const SECONDARY = ['habitos','metas','semana','mes','inbox','rotina','dashboard']
+  const SECONDARY = ['habitos','metas','projetos','mes','inbox','rotina','dashboard']
   const activeIsSecondary = SECONDARY.includes(active)
 
   return (

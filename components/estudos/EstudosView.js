@@ -1007,10 +1007,10 @@ function PlanoTab({ materias, simulados, blocks, setBlocks }) {
   }
 
   function handleAplicar() {
-    const updated = aplicarPlano(planoGerado)
+    const updated = aplicarPlano(planoGerado, materias)
     setBlocks(updated)
     setPlanoGerado([])
-    alert(`✅ ${planoGerado.length} blocos adicionados ao seu Hoje!`)
+    alert(`✅ ${planoGerado.length} blocos adicionados ao seu plano diário!`)
   }
 
   const provasProximas = provas.filter((p) => p.data >= new Date().toISOString().slice(0, 10))
