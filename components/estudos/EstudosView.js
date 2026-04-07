@@ -1613,11 +1613,21 @@ export default function EstudosView() {
   const [blocks, setBlocks] = useState([])
   const [simulados, setSimulados] = useState([])
 
-  useEffect(() => {
+  function reload() {
     setMaterias(loadMaterias())
     setBlocks(loadStudyBlocks())
     setSimulados(loadSimulados())
-  }, [])
+  }
+
+  useEffect(() => {
+    reload()
+  }, []) // eslint-disable-line
+
+  // Recarrega ao trocar de aba para pegar mudanças feitas no Hoje
+  function handleTabChange(id) {
+    setSubTab(id)
+    reload()
+  }
 
   const revisoesPendentes = getTopicsForReviewToday(materias).length
   const errosPendentes = loadBancoErros().filter((e) => !e.dominado).length
@@ -1646,7 +1656,7 @@ export default function EstudosView() {
         {SUB_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setSubTab(t.id)}
+            onClick={() => handleTabChange(t.id)}
             className={`relative flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all ${
               subTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
             }`}
