@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import SummaryCards from './SummaryCards'
 import { MonthlyChart, CategoryPie, DailyChart } from './Charts'
 import TxList from './TxList'
@@ -10,7 +10,112 @@ import {
   loadTransactions, addTx, removeTx,
   calcPeriodSummary, calcByCategoryPeriod, calcLast6Months, calcDailyForPeriod,
   loadFinGoal, saveFinGoal, fmt, getPeriodTxs,
+  loadCategories, saveCategories, addCategory, removeCategory,
+  getColorPresets, DEFAULT_CATEGORIES,
 } from '@/lib/finance'
+
+const PACK_MEDICINA_CATS = [
+  { label: 'Cursinho/Residência', color: '#6366f1' },
+  { label: 'Livros e material',   color: '#8b5cf6' },
+  { label: 'Alimentação',         color: '#f97316' },
+  { label: 'Transporte',          color: '#06b6d4' },
+  { label: 'Moradia',             color: '#f59e0b' },
+  { label: 'Saúde',               color: '#ef4444' },
+  { label: 'Lazer',               color: '#ec4899' },
+  { label: 'Investimento',        color: '#10b981' },
+  { label: 'Outros',              color: '#94a3b8' },
+]
+
+function CategoryManager({ onClose }) {
+  const [cats, setCats] = useState(loadCategories())
+  const [novaLabel, setNovaLabel] = useState('')
+  const [novaCor, setNovaCor] = useState('#6366f1')
+  const presets = getColorPresets()
+
+  function handleAdd() {
+    if (!novaLabel.trim()) return
+    setCats(addCategory(cats, { label: novaLabel.trim(), color: novaCor }))
+    setNovaLabel('')
+  }
+
+  function handleRemove(id) {
+    const builtin = DEFAULT_CATEGORIES.find((c) => c.id === id)
+    if (builtin && !confirm(`Remover "${builtin.label}"? Transações existentes com essa categoria não serão afetadas.`)) return
+    setCats(removeCategory(cats, id))
+  }
+
+  function handlePackMedicina() {
+    const { set } = require('@/lib/storage')
+    const novaCats = PACK_MEDICINA_CATS.map((item, i) => {
+      const preset = presets.find((p) => p.color === item.color) || presets[i % presets.length]
+      const id = item.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_med'
+      return { id, label: item.label, ...preset }
+    })
+    saveCategories(novaCats)
+    setCats(novaCats)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-white rounded-t-2xl shadow-xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+          <h2 className="font-bold text-slate-800 text-lg">Categorias</h2>
+          <button onClick={onClose} className="text-slate-400 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
+          {/* Pack medicina */}
+          <button onClick={handlePackMedicina}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-2xl text-left hover:bg-indigo-100 transition-all">
+            <span className="text-xl">🩺</span>
+            <div>
+              <p className="text-sm font-bold text-indigo-800">Carregar pack medicina</p>
+              <p className="text-xs text-indigo-500">Substitui pelas categorias ideais pra estudante de medicina</p>
+            </div>
+          </button>
+
+          {/* Lista atual */}
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Categorias atuais ({cats.length})</p>
+            <div className="space-y-1.5">
+              {cats.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                  <span className="text-sm font-semibold text-slate-700 flex-1">{c.label}</span>
+                  <button onClick={() => handleRemove(c.id)}
+                    className="text-slate-300 hover:text-red-400 text-xs w-6 h-6 flex items-center justify-center">✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Nova categoria */}
+          <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-bold text-slate-500">Nova categoria</p>
+            <input value={novaLabel} onChange={(e) => setNovaLabel(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+              placeholder="Nome da categoria..."
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400" />
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Cor</p>
+              <div className="flex flex-wrap gap-2">
+                {presets.map((p) => (
+                  <button key={p.color} onClick={() => setNovaCor(p.color)}
+                    style={{ background: p.color }}
+                    className={`w-8 h-8 rounded-full transition-all ${novaCor === p.color ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''}`} />
+                ))}
+              </div>
+            </div>
+            <button onClick={handleAdd} disabled={!novaLabel.trim()}
+              className="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-sm disabled:opacity-40">
+              + Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const SUB_TABS = [
   { id: 'resumo',    label: 'Resumo' },
@@ -83,6 +188,7 @@ export default function FinanceTab() {
   const [customEnd, setCustomEnd] = useState('')
   const [editGoal, setEditGoal] = useState(false)
   const [goalInput, setGoalInput] = useState('')
+  const [showCatManager, setShowCatManager] = useState(false)
 
   useEffect(() => {
     setTxs(loadTransactions())
@@ -140,12 +246,20 @@ export default function FinanceTab() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-xl font-bold text-slate-900">Finanças</h1>
-        <button
-          onClick={() => setModal(true)}
-          className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-        >
-          + Novo
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCatManager(true)}
+            className="px-3 py-2 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl transition-colors hover:bg-slate-200"
+          >
+            🏷️
+          </button>
+          <button
+            onClick={() => setModal(true)}
+            className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+          >
+            + Novo
+          </button>
+        </div>
       </div>
 
       {/* Period selector */}
@@ -316,8 +430,9 @@ export default function FinanceTab() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modals */}
       <AddTxModal open={modal} onClose={() => setModal(false)} onAdd={handleAdd} />
+      {showCatManager && <CategoryManager onClose={() => setShowCatManager(false)} />}
     </div>
   )
 }

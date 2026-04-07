@@ -16,7 +16,7 @@ import AuthWrapper from '@/components/auth/AuthWrapper'
 import MaisMenu from '@/components/ui/MaisMenu'
 import HabitsView from '@/components/habitos/HabitsView'
 import DashboardView from '@/components/dashboard/DashboardView'
-import { loadDayPlan, saveDayPlan, timeToMinutes } from '@/lib/planner'
+import { loadDayPlan, saveDayPlan, timeToMinutes, getRecurringForDate } from '@/lib/planner'
 import { dateKey } from '@/lib/date'
 import { loadInbox } from '@/lib/quickcapture'
 import { loadReviews, shouldShowReviewPrompt } from '@/lib/weeklyreview'
@@ -187,6 +187,15 @@ export default function Home() {
 
   useEffect(() => {
     const savedPlan = loadDayPlan(dk)
+    // Inject recurring blocks not yet in today's plan
+    const recurring = getRecurringForDate(dk)
+    if (savedPlan && recurring.length > 0) {
+      const existingRecIds = new Set((savedPlan.blocks || []).map((b) => b._recurringId).filter(Boolean))
+      const novos = recurring.filter((rb) => !existingRecIds.has(rb._recurringId))
+      if (novos.length > 0) {
+        savedPlan.blocks = [...(savedPlan.blocks || []), ...novos]
+      }
+    }
     if (savedPlan?.blocks) {
       savedPlan.blocks = [...savedPlan.blocks].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
       saveDayPlan(dk, savedPlan)

@@ -9,6 +9,15 @@ import { dateKey } from '@/lib/date'
 import HabitCard from './HabitCard'
 import AddHabitModal from './AddHabitModal'
 
+const PACK_MEDICINA = [
+  { title: 'Questões do dia', icon: '📝', color: '#6366f1', frequency: 'daily' },
+  { title: 'Revisão (Anki/flashcards)', icon: '🔁', color: '#8b5cf6', frequency: 'daily' },
+  { title: 'Sono 7h+', icon: '😴', color: '#06b6d4', frequency: 'daily' },
+  { title: 'Exercício físico', icon: '💪', color: '#10b981', frequency: 'daily' },
+  { title: 'Hidratação (2L)', icon: '💧', color: '#0ea5e9', frequency: 'daily' },
+  { title: 'Leitura científica', icon: '📖', color: '#f59e0b', frequency: 'daily' },
+]
+
 export default function HabitsView() {
   const [habits, setHabits] = useState([])
   const [logs, setLogs] = useState({})
@@ -64,15 +73,25 @@ export default function HabitsView() {
 
       {/* Habits list */}
       {habits.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center mb-4">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 text-center mb-4">
           <p className="text-4xl mb-3">🌱</p>
           <p className="text-slate-500 font-medium">Nenhum hábito criado ainda</p>
-          <p className="text-slate-400 text-sm mt-1">Comece pequeno, seja consistente!</p>
+          <p className="text-slate-400 text-sm mt-1 mb-5">Comece pequeno, seja consistente!</p>
+          <button
+            onClick={() => {
+              let updated = habits
+              PACK_MEDICINA.forEach((h) => { updated = addHabit(updated, h) })
+              setHabits(updated)
+            }}
+            className="w-full py-3 bg-indigo-50 border-2 border-indigo-200 text-indigo-700 text-sm font-bold rounded-xl hover:bg-indigo-100 transition-colors mb-3"
+          >
+            ⚡ Carregar pack de medicina (6 hábitos)
+          </button>
           <button
             onClick={() => setAddOpen(true)}
-            className="mt-4 px-4 py-2 bg-indigo-500 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition-colors"
+            className="w-full py-3 bg-white border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
           >
-            Criar primeiro hábito
+            + Criar manualmente
           </button>
         </div>
       ) : (

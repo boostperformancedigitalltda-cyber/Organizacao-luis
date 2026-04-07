@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
-import { CATEGORIES, PAYMENT_METHODS } from '@/lib/finance'
+import { loadCategories, PAYMENT_METHODS } from '@/lib/finance'
 
 export default function AddTxModal({ open, onClose, onAdd }) {
   const [type, setType] = useState('saida')
@@ -11,6 +11,15 @@ export default function AddTxModal({ open, onClose, onAdd }) {
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [paymentMethod, setPaymentMethod] = useState('pix')
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    const cats = loadCategories()
+    setCategories(cats)
+    if (cats.length > 0 && !cats.find((c) => c.id === category)) {
+      setCategory(cats[0].id)
+    }
+  }, [open])
 
   const handleSave = () => {
     const val = parseFloat(amount.replace(',', '.'))
@@ -18,7 +27,7 @@ export default function AddTxModal({ open, onClose, onAdd }) {
     onAdd({ type, amount: val, category, description, date, paymentMethod: type === 'saida' ? paymentMethod : null })
     setAmount('')
     setDescription('')
-    setCategory('alimentacao')
+    setCategory(categories[0]?.id || 'outros')
     setDate(new Date().toISOString().slice(0, 10))
     setPaymentMethod('pix')
     onClose()
@@ -67,7 +76,7 @@ export default function AddTxModal({ open, onClose, onAdd }) {
         <div>
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Categoria</label>
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setCategory(cat.id)}

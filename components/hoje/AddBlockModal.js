@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
-import { BLOCK_CATEGORIES, makeNewBlock } from '@/lib/planner'
+import { BLOCK_CATEGORIES, makeNewBlock, loadRecurringBlocks, addRecurringBlock, removeRecurringBlock, saveRecurringBlocks } from '@/lib/planner'
 import { loadMaterias } from '@/lib/estudos'
 import { loadPlanos } from '@/lib/treino'
 
 const ICONS = ['📌', '📚', '💪', '🏠', '💼', '🍳', '🧹', '🎯', '💰', '🎮', '🏃', '🧘', '📝', '🔧', '🛒', '☕', '🎵', '📞']
 
+const DAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
 export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialBlock }) {
   const [block, setBlock] = useState(initialBlock || makeNewBlock())
   const [materias, setMaterias] = useState([])
   const [planos, setPlanos] = useState([])
+  const [recorrente, setRecorrente] = useState(false)
+  const [dowsSelecionados, setDowsSelecionados] = useState([])
 
   useEffect(() => {
     setMaterias(loadMaterias())
@@ -26,6 +30,10 @@ export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialB
 
   const handleSave = () => {
     if (!block.title.trim()) return
+    if (recorrente && dowsSelecionados.length > 0) {
+      const existing = loadRecurringBlocks()
+      addRecurringBlock(existing, block, dowsSelecionados)
+    }
     onAdd(block)
     onClose()
   }
@@ -211,6 +219,43 @@ export default function AddBlockModal({ open, onClose, onAdd, onRemove, initialB
             className="mt-1.5 w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-300 outline-none focus:border-indigo-400 transition resize-none"
           />
         </div>
+
+        {/* Recorrente */}
+        {!initialBlock && (
+          <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-sm font-bold text-slate-700">Repetir toda semana</p>
+                <p className="text-xs text-slate-400">Bloco será adicionado automaticamente</p>
+              </div>
+              <button
+                onClick={() => setRecorrente(!recorrente)}
+                className={`w-12 h-6 rounded-full transition-all flex items-center px-0.5 ${recorrente ? 'bg-indigo-500 justify-end' : 'bg-slate-200 justify-start'}`}
+              >
+                <span className="w-5 h-5 bg-white rounded-full shadow-sm" />
+              </button>
+            </div>
+            {recorrente && (
+              <div className="flex gap-1.5 mt-2">
+                {DAY_SHORT.map((d, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setDowsSelecionados((prev) =>
+                      prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+                    )}
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      dowsSelecionados.includes(i)
+                        ? 'bg-indigo-500 text-white'
+                        : 'bg-white border border-slate-200 text-slate-500'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           onClick={handleSave}
