@@ -219,66 +219,85 @@ function SimuladoModal({ materias, onSave, onClose }) {
   const [total, setTotal] = useState('')
   const [acertos, setAcertos] = useState('')
   const [fonte, setFonte] = useState('')
+  const [errosTexto, setErrosTexto] = useState('')
 
-  const aproveitamento = total > 0 ? Math.round((acertos / total) * 100) : 0
+  const tot = parseInt(total) || 0
+  const ace = parseInt(acertos) || 0
+  const aproveitamento = tot > 0 ? Math.round((ace / tot) * 100) : 0
+
+  function handleSave() {
+    if (!tot) return
+    onSave({ date, materiaId, total: tot, acertos: ace, fonte })
+    if (errosTexto.trim()) {
+      let errosAtual = loadBancoErros()
+      errosTexto.split('\n').filter((l) => l.trim()).forEach((linha) => {
+        errosAtual = addErro(errosAtual, { materiaId, tema: linha.trim(), fonte })
+      })
+    }
+    onClose()
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-white rounded-t-2xl p-5 pb-8 shadow-xl animate-slideUp">
+      <div className="w-full max-w-lg bg-white rounded-t-2xl p-5 pb-8 shadow-xl animate-slideUp max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-slate-800 text-lg">Registrar simulado</h2>
+          <h2 className="font-bold text-slate-800 text-lg">Registrar sessão</h2>
           <button onClick={onClose} className="text-slate-400 text-2xl leading-none">&times;</button>
         </div>
         <div className="space-y-3">
+          <select value={materiaId} onChange={(e) => setMateriaId(e.target.value)}
+            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400">
+            <option value="">Matéria — geral / misto</option>
+            {materias.map((m) => (
+              <option key={m.id} value={m.id}>{m.icon} {m.name}</option>
+            ))}
+          </select>
+
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Data</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Matéria (opcional)</label>
-              <select value={materiaId} onChange={(e) => setMateriaId(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400">
-                <option value="">Geral / misto</option>
-                {materias.map((m) => (
-                  <option key={m.id} value={m.id}>{m.icon} {m.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1">Fonte / nome do simulado</label>
-            <input value={fonte} onChange={(e) => setFonte(e.target.value)}
-              placeholder="Ex: Medcof, Revalida, UNA-SUS..."
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-slate-500 mb-1">Total de questões</label>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Questões feitas</label>
               <input type="number" min="0" value={total} onChange={(e) => setTotal(e.target.value)}
-                placeholder="120"
+                placeholder="50"
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
             </div>
             <div className="flex-1">
               <label className="block text-xs font-semibold text-slate-500 mb-1">Acertos</label>
-              <input type="number" min="0" max={total || undefined} value={acertos} onChange={(e) => setAcertos(e.target.value)}
-                placeholder="80"
+              <input type="number" min="0" max={tot || undefined} value={acertos} onChange={(e) => setAcertos(e.target.value)}
+                placeholder="35"
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
             </div>
           </div>
-          {total > 0 && acertos !== '' && (
-            <div className={`rounded-xl px-4 py-3 text-center font-bold text-lg ${aprovColor(aproveitamento)}`}>
-              {aproveitamento}% de aproveitamento
+
+          {tot > 0 && acertos !== '' && (
+            <div className={`rounded-xl px-4 py-3 text-center font-black text-2xl ${aprovColor(aproveitamento)}`}>
+              {aproveitamento}%
+              <p className="text-xs font-semibold opacity-70 mt-0.5">{ace} de {tot} questões</p>
             </div>
           )}
+
+          <input value={fonte} onChange={(e) => setFonte(e.target.value)}
+            placeholder="Fonte — QConcursos, Revalida 2023... (opcional)"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
+
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:border-indigo-400" />
+
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-3">
+            <label className="block text-xs font-bold text-red-600 mb-1.5">✗ Temas que errei (opcional)</label>
+            <textarea
+              value={errosTexto}
+              onChange={(e) => setErrosTexto(e.target.value)}
+              placeholder={"Um tema por linha:\nCardiologia — ECG\nPediatria — vacinação"}
+              rows={3}
+              className="w-full bg-white border border-red-100 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-red-300 resize-none"
+            />
+            <p className="text-[10px] text-red-400 mt-1">Salvos automaticamente no Banco de Erros</p>
+          </div>
         </div>
-        <button
-          onClick={() => total && onSave({ date, materiaId, total, acertos, fonte })}
-          disabled={!total}
-          className="mt-5 w-full bg-indigo-600 text-white font-bold py-3 rounded-xl disabled:opacity-40"
-        >
-          Salvar simulado
+
+        <button onClick={handleSave} disabled={!tot}
+          className="mt-5 w-full bg-indigo-600 text-white font-bold py-3 rounded-xl disabled:opacity-40">
+          Salvar
         </button>
       </div>
     </div>
