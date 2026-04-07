@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { onAuth, signInWithGoogle, logout, fsGetAll, initSync, KEY_MAP, fsSetDirect } from '@/lib/firebase'
 import { get, set } from '@/lib/storage'
+import Onboarding, { isOnboardingDone } from '@/components/onboarding/Onboarding'
 
 export const AuthContext = createContext(null)
 export function useAuth() { return useContext(AuthContext) }
@@ -12,6 +13,7 @@ export default function AuthWrapper({ children }) {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     const unsub = onAuth(async (u) => {
@@ -48,6 +50,8 @@ export default function AuthWrapper({ children }) {
         }
         setSyncing(false)
         setUser(u)
+        // Show onboarding for new users
+        if (!isOnboardingDone()) setShowOnboarding(true)
       } else {
         setUser(null)
       }
@@ -131,7 +135,11 @@ export default function AuthWrapper({ children }) {
     )
   }
 
-  // User logged in — render the app with user context
+  // User logged in — show onboarding first if needed
+  if (showOnboarding) {
+    return <Onboarding onDone={() => setShowOnboarding(false)} />
+  }
+
   return (
     <AuthContext.Provider value={{ user, logout }}>
       {children}
