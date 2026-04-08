@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sistema-vida-v2'
+const CACHE_NAME = 'sistema-vida-v4'
 const STATIC_ASSETS = ['/', '/manifest.json']
 
 self.addEventListener('install', (event) => {
@@ -19,12 +19,32 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
+
+  const url = new URL(event.request.url)
+
+  // For HTML navigation requests (the app shell) — always network first
+  if (event.request.mode === 'navigate' || url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const clone = res.clone()
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone))
+          return res
+        })
+        .catch(() => caches.match(event.request))
+    )
+    return
+  }
+
+  // For JS/CSS chunks and other static assets — stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request)
         .then((res) => {
-          const clone = res.clone()
-          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone))
+          if (res.ok) {
+            const clone = res.clone()
+            caches.open(CACHE_NAME).then((c) => c.put(event.request, clone))
+          }
           return res
         })
         .catch(() => cached)
