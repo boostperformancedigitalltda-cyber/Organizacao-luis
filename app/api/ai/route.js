@@ -190,36 +190,6 @@ Retorne JSON com este formato exato:
   return parsed
 }
 
-// ── Gerar Flashcards com IA ───────────────────────────────────────────────────
-async function gerarFlashcards({ materiaNome, topico, quantidade }) {
-  const system = `Você é um especialista em medicina e educação.
-Sua tarefa é criar flashcards de alta qualidade para estudo de medicina.
-Responda APENAS com JSON válido, sem markdown, sem explicação.`
-
-  const user = `Crie ${quantidade || 10} flashcards para o tópico abaixo.
-Matéria: ${materiaNome}
-Tópico: ${topico}
-
-Regras:
-- Frente: pergunta objetiva e clara (como seria numa prova de residência)
-- Verso: resposta direta, completa mas concisa
-- Foque em: fisiopatologia, diagnóstico, tratamento, critérios diagnósticos, doses
-- Varie o tipo: definições, mecanismos, condutas, diferenciais
-- Nível: residência médica brasileira
-
-Retorne JSON exato:
-{
-  "flashcards": [
-    { "frente": "pergunta", "verso": "resposta", "dificuldade": 3 },
-    ...
-  ]
-}
-Dificuldade: 1=muito fácil, 2=fácil, 3=médio, 4=difícil, 5=muito difícil`
-
-  const raw = await callClaude(system, user)
-  const parsed = JSON.parse(raw.trim())
-  return parsed.flashcards || []
-}
 
 // ── Agente de Rotina Semanal ──────────────────────────────────────────────────
 async function agenteRotina({ messages, contexto }) {
@@ -321,11 +291,6 @@ export async function POST(request) {
     if (action === 'gerar-plano') {
       const resultado = await gerarPlanoIA(payload)
       return NextResponse.json(resultado)
-    }
-
-    if (action === 'gerar-flashcards') {
-      const flashcards = await gerarFlashcards(payload)
-      return NextResponse.json({ flashcards })
     }
 
     if (action === 'agente-rotina') {
