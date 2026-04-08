@@ -32,7 +32,7 @@ export default function PomodoroTimer({ onClose, activeBlock }) {
             if (mode === 'foco') {
               setCiclos((c) => c + 1)
               // Notificação
-              if (typeof window !== 'undefined' && Notification.permission === 'granted') {
+              if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                 new Notification('🍅 Pomodoro concluído!', { body: 'Hora da pausa.' })
               }
             }
