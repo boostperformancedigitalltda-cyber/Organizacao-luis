@@ -9,6 +9,7 @@ import { loadPlanos, getTodayPlano, loadLogs, addLog } from '@/lib/treino'
 import { loadHabits, loadHabitLogs, toggleHabitDay, isHabitDueToday, isDoneToday } from '@/lib/habits'
 import { dateKey } from '@/lib/date'
 import AddBlockModal from './AddBlockModal'
+import PomodoroTimer from '@/components/shared/PomodoroTimer'
 
 const ENERGY_EMOJI = { 1: '😴', 2: '😐', 3: '🙂', 4: '😊', 5: '🔥' }
 
@@ -206,6 +207,7 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
   const [addOpen, setAddOpen] = useState(false)
   const [editBlock, setEditBlock] = useState(null)
   const [focusBlock, setFocusBlock] = useState(null)
+  const [showPomodoro, setShowPomodoro] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationShown, setCelebrationShown] = useState(false)
 
@@ -420,6 +422,14 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
         </div>
       )}
 
+      {/* Pomodoro FAB */}
+      <button onClick={() => setShowPomodoro(true)}
+        className="fixed right-20 w-12 h-12 bg-white border border-slate-200 shadow-md rounded-2xl flex items-center justify-center text-xl active:scale-90 z-30 transition-all hover:shadow-lg"
+        style={{ bottom: 'calc(var(--nav-height) + var(--safe-bottom) + 18px)' }}
+        title="Pomodoro">
+        🍅
+      </button>
+
       {/* Add block FAB */}
       <button onClick={() => setAddOpen(true)}
         className="fixed right-4 w-14 h-14 btn-primary rounded-2xl flex items-center justify-center text-2xl font-light active:scale-90 z-30"
@@ -445,6 +455,13 @@ export default function DayTimeline({ plan, onToggle, onAddBlock, onRemoveBlock,
 
       {/* End-of-day celebration */}
       {showCelebration && <CelebrationModal onClose={() => setShowCelebration(false)} />}
+
+      {showPomodoro && (
+        <PomodoroTimer
+          onClose={() => setShowPomodoro(false)}
+          activeBlock={getCurrentBlock(blocks)}
+        />
+      )}
 
       <AddBlockModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={(b) => { onAddBlock(b, false); setAddOpen(false) }} />
       {editBlock && (

@@ -21,6 +21,8 @@ import {
   loadAulas, saveAulas, addAula, removeAula,
 } from '@/lib/disponibilidade'
 import { gerarPlanoSemanal, aplicarPlano } from '@/lib/planejador'
+import FlashcardsTab from './FlashcardsTab'
+import { loadFlashcards, getFlashcardsParaRevisar } from '@/lib/flashcards'
 
 // ── AI helpers ────────────────────────────────────────────────────────────────
 async function aiProcessarCronograma(materiaNome, texto) {
@@ -1631,14 +1633,16 @@ export default function EstudosView() {
 
   const revisoesPendentes = getTopicsForReviewToday(materias).length
   const errosPendentes = loadBancoErros().filter((e) => !e.dominado).length
+  const flashcardsPendentes = getFlashcardsParaRevisar(loadFlashcards()).length
 
   const SUB_TABS = [
-    { id: 'hoje',      label: 'Hoje',      icon: '📅' },
-    { id: 'materias',  label: 'Matérias',  icon: '📚' },
-    { id: 'simulados', label: 'Simulados', icon: '📝' },
-    { id: 'erros',     label: 'Erros',     icon: '✗',  badge: errosPendentes },
-    { id: 'plano',     label: 'Plano',     icon: '✨' },
-    { id: 'progresso', label: 'Progresso', icon: '📊' },
+    { id: 'hoje',       label: 'Hoje',       icon: '📅' },
+    { id: 'materias',   label: 'Matérias',   icon: '📚' },
+    { id: 'simulados',  label: 'Simulados',  icon: '📝' },
+    { id: 'flashcards', label: 'Cards',      icon: '🃏', badge: flashcardsPendentes },
+    { id: 'erros',      label: 'Erros',      icon: '✗',  badge: errosPendentes },
+    { id: 'plano',      label: 'Plano',      icon: '✨' },
+    { id: 'progresso',  label: 'Progresso',  icon: '📊' },
   ]
 
   return (
@@ -1672,12 +1676,13 @@ export default function EstudosView() {
         ))}
       </div>
 
-      {subTab === 'hoje'      && <TodayTab materias={materias} blocks={blocks} setBlocks={setBlocks} />}
-      {subTab === 'materias'  && <MateriasTab materias={materias} setMaterias={setMaterias} blocks={blocks} setBlocks={setBlocks} />}
-      {subTab === 'simulados' && <SimuladosTab materias={materias} simulados={simulados} setSimulados={setSimulados} />}
-      {subTab === 'erros'     && <BancoErrosTab materias={materias} simulados={simulados} />}
-      {subTab === 'plano'     && <PlanoTab materias={materias} simulados={simulados} blocks={blocks} setBlocks={setBlocks} />}
-      {subTab === 'progresso' && <ProgressTab materias={materias} blocks={blocks} simulados={simulados} />}
+      {subTab === 'hoje'       && <TodayTab materias={materias} blocks={blocks} setBlocks={setBlocks} />}
+      {subTab === 'materias'   && <MateriasTab materias={materias} setMaterias={setMaterias} blocks={blocks} setBlocks={setBlocks} />}
+      {subTab === 'simulados'  && <SimuladosTab materias={materias} simulados={simulados} setSimulados={setSimulados} />}
+      {subTab === 'flashcards' && <FlashcardsTab materias={materias} />}
+      {subTab === 'erros'      && <BancoErrosTab materias={materias} simulados={simulados} />}
+      {subTab === 'plano'      && <PlanoTab materias={materias} simulados={simulados} blocks={blocks} setBlocks={setBlocks} />}
+      {subTab === 'progresso'  && <ProgressTab materias={materias} blocks={blocks} simulados={simulados} />}
     </div>
   )
 }
