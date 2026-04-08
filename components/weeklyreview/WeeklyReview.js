@@ -1,7 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { saveReview, getCurrentWeekStart, formatWeekLabel } from '@/lib/weeklyreview'
+import { loadDayPlan, calcProgress } from '@/lib/planner'
+import { loadStudyBlocks, getWeeklyStats, formatMin, loadMaterias } from '@/lib/estudos'
+import { loadHabits, loadHabitLogs, isHabitDueToday } from '@/lib/habits'
+import { startOfWeek, getLast, dateKey } from '@/lib/date'
 
 const RATING_AREAS = [
   { id: 'estudo',   label: 'Estudos',      icon: '📚' },
@@ -22,6 +26,72 @@ function StarRating({ value, onChange }) {
           ⭐
         </button>
       ))}
+    </div>
+  )
+}
+
+function WeekStats() {
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    const last7 = getLast(7, 'day')
+    const weekDates = last7.map(d => dateKey(d))
+
+    // Day completion
+    let plansPlanned = 0, plansCompleted = 0, totalPct = 0
+    weekDates.forEach(dk => {
+      const plan = loadDayPlan(dk)
+      if (!plan?.planned) return
+      plansPlanned++
+      const { pct } = calcProgress(plan.blocks, plan.completed)
+      totalPct += pct
+      if (pct >= 80) plansCompleted++
+    })
+    const avgPct = plansPlanned > 0 ? Math.round(totalPct / plansPlanned) : 0
+
+    // Study hours
+    const blocks = loadStudyBlocks()
+    const weekStart = startOfWeek(new Date())
+    const materias = loadMaterias()
+    const weekStats = getWeeklyStats(blocks, materias, weekStart)
+    const studyMin = weekStats.reduce((s, x) => s + x.completedMin, 0)
+
+    // Habits
+    const habits = loadHabits()
+    const habitLogs = loadHabitLogs()
+    const dueHabits = habits.filter(isHabitDueToday)
+    let habitsDone = 0, habitsTotal = 0
+    weekDates.forEach(dk => {
+      dueHabits.forEach(h => {
+        habitsTotal++
+        if ((habitLogs[h.id] || []).includes(dk)) habitsDone++
+      })
+    })
+    const habitPct = habitsTotal > 0 ? Math.round((habitsDone / habitsTotal) * 100) : null
+
+    setStats({ avgPct, studyMin, habitPct, plansPlanned })
+  }, [])
+
+  if (!stats || stats.plansPlanned === 0) return null
+
+  return (
+    <div className="grid grid-cols-3 gap-2 mb-5">
+      <div className="bg-indigo-50 rounded-2xl p-3 text-center">
+        <p className="text-xl font-black text-indigo-600">{stats.avgPct}%</p>
+        <p className="text-[10px] text-indigo-400 font-bold mt-0.5">agenda cumprida</p>
+      </div>
+      {stats.studyMin > 0 && (
+        <div className="bg-violet-50 rounded-2xl p-3 text-center">
+          <p className="text-xl font-black text-violet-600">{formatMin(stats.studyMin)}</p>
+          <p className="text-[10px] text-violet-400 font-bold mt-0.5">estudo</p>
+        </div>
+      )}
+      {stats.habitPct !== null && (
+        <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+          <p className="text-xl font-black text-emerald-600">{stats.habitPct}%</p>
+          <p className="text-[10px] text-emerald-400 font-bold mt-0.5">hábitos</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -82,6 +152,7 @@ export default function WeeklyReview({ reviews, setReviews, onClose }) {
           {/* Step 0: Ratings */}
           {step === 0 && (
             <div>
+              <WeekStats />
               <p className="text-slate-600 text-sm mb-4">Como foi essa semana em cada área?</p>
               <div className="space-y-4">
                 {RATING_AREAS.map((area) => (

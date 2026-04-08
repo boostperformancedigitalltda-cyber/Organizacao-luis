@@ -28,7 +28,7 @@ function StepBemVindo({ onNext }) {
       <div className="w-24 h-24 bg-indigo-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl">
         <span className="text-5xl">🩺</span>
       </div>
-      <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Bem-vindo ao MedPlanner</h1>
+      <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Bem-vindo ao Planner</h1>
       <p className="text-slate-500 text-sm leading-relaxed mb-8">
         Vamos configurar seu app em menos de 2 minutos.<br />
         Assim ele já começa trabalhando por você.
@@ -351,13 +351,14 @@ function StepPronto({ onFinish }) {
       <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Tudo pronto!</h2>
       <p className="text-slate-500 text-sm leading-relaxed mb-8">
         Seu app já está configurado.<br />
-        Vá em <strong>Estudos → Plano → Gerar</strong> para criar seu primeiro plano semanal.
+        Explore cada aba e comece a organizar sua rotina.
       </p>
       <div className="w-full space-y-2 text-left mb-8">
         {[
-          { icon: '📚', label: 'Importe o cronograma de cada matéria (botão ✨)' },
-          { icon: '📋', label: 'Adicione suas próximas provas' },
-          { icon: '🤖', label: 'Gere seu plano semanal com IA' },
+          { icon: '📅', label: 'Monte sua agenda diária na aba Hoje' },
+          { icon: '🎯', label: 'Defina metas na aba Metas e acompanhe o progresso' },
+          { icon: '💰', label: 'Registre suas finanças para controlar gastos' },
+          { icon: '🤖', label: 'Use o agente de IA para planejar a semana' },
         ].map((tip) => (
           <div key={tip.icon} className="flex items-start gap-3 bg-slate-50 rounded-2xl px-4 py-3">
             <span className="text-lg mt-0.5">{tip.icon}</span>

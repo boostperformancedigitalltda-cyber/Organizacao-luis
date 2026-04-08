@@ -7,6 +7,8 @@ import { loadTransactions, calcMonthSummary, calcByCategory, fmt } from '@/lib/f
 import { loadProjetos, loadTasks, getProjetoStats } from '@/lib/projetos'
 import { loadHabits, loadHabitLogs, isHabitDueToday, getStreak } from '@/lib/habits'
 import { loadPlanos, getTodayPlano, loadLogs } from '@/lib/treino'
+import { loadProvas, getProvasProximas, diasAteProva, getTipoProva } from '@/lib/provas'
+import { loadGoals, goalProgress, getGoalCat } from '@/lib/goals'
 import { dateKey, startOfWeek, getLast } from '@/lib/date'
 
 const ENERGY_EMOJI = { 1: '😴', 2: '😐', 3: '🙂', 4: '😊', 5: '🔥' }
@@ -366,6 +368,122 @@ function ProjetosCard({ projetos, tasks }) {
   )
 }
 
+// ── O que fazer agora ─────────────────────────────────────────────────────────
+function AgendaAgora({ plan }) {
+  if (!plan?.blocks?.length) return null
+
+  const now = new Date()
+  const currentMin = now.getHours() * 60 + now.getMinutes()
+  const toMin = (t) => { const [h, m] = (t || '').split(':').map(Number); return h * 60 + m }
+
+  const sorted = [...(plan.blocks || [])].filter(b => b.startTime && b.endTime).sort((a, b) => toMin(a.startTime) - toMin(b.startTime))
+  const current = sorted.find(b => toMin(b.startTime) <= currentMin && toMin(b.endTime) > currentMin)
+  const next = sorted.find(b => toMin(b.startTime) > currentMin)
+  const block = current || next
+  if (!block) return null
+
+  const isNow = !!current
+  const minutesUntil = isNow ? 0 : toMin(block.startTime) - currentMin
+  const minutesLeft = isNow ? toMin(block.endTime) - currentMin : null
+
+  return (
+    <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl p-4 shadow-md mb-4 text-white">
+      <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider mb-2">
+        {isNow ? '▶ Acontecendo agora' : `⏱ Próximo · em ${minutesUntil < 60 ? `${minutesUntil}min` : `${Math.floor(minutesUntil / 60)}h${minutesUntil % 60 > 0 ? `${minutesUntil % 60}min` : ''}`}`}
+      </p>
+      <div className="flex items-center gap-3">
+        <span className="text-3xl flex-shrink-0">{block.icon || '📋'}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-white leading-tight truncate">{block.title}</p>
+          <p className="text-xs text-indigo-200 mt-0.5">{block.startTime} – {block.endTime}</p>
+          {block.note && <p className="text-[10px] text-indigo-200 mt-0.5 truncate">{block.note}</p>}
+        </div>
+        {isNow && minutesLeft !== null && (
+          <div className="text-right flex-shrink-0 bg-white/10 rounded-xl px-3 py-2">
+            <p className="text-xl font-black leading-none">{minutesLeft}</p>
+            <p className="text-[9px] text-indigo-200 font-bold">min rest.</p>
+          </div>
+        )}
+        {!isNow && minutesUntil <= 15 && (
+          <div className="flex-shrink-0 bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-1 rounded-full">
+            Em breve!
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Próximas provas ───────────────────────────────────────────────────────────
+function ProvasWidget({ provas, materias }) {
+  const proximas = getProvasProximas(provas, 60).slice(0, 4)
+  if (proximas.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">📅 Próximas provas</p>
+      <div className="space-y-2.5">
+        {proximas.map((p) => {
+          const dias = diasAteProva(p.data)
+          const mat = materias.find((m) => m.id === p.materiaId)
+          const tipo = getTipoProva(p.tipo)
+          const urgente = dias <= 7
+          return (
+            <div key={p.id} className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${urgente ? 'bg-red-50' : 'bg-slate-50'}`}>
+                {tipo.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{p.titulo}</p>
+                {mat && <p className="text-[10px] text-slate-400">{mat.icon} {mat.name}</p>}
+              </div>
+              <div className={`text-center flex-shrink-0 px-3 py-1.5 rounded-xl ${urgente ? 'bg-red-50' : 'bg-slate-50'}`}>
+                <p className={`text-base font-black leading-none ${urgente ? 'text-red-500' : 'text-slate-600'}`}>{dias}</p>
+                <p className={`text-[9px] font-bold ${urgente ? 'text-red-400' : 'text-slate-400'}`}>dias</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Metas widget ──────────────────────────────────────────────────────────────
+function MetasWidget({ goals }) {
+  const ativas = goals.filter((g) => g.status !== 'concluida').slice(0, 4)
+  if (ativas.length === 0) return null
+
+  const media = Math.round(ativas.reduce((s, g) => s + goalProgress(g), 0) / ativas.length)
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">🎯 Metas</p>
+        <span className="text-xs font-black text-indigo-500">{media}% média</span>
+      </div>
+      <div className="space-y-3">
+        {ativas.map((goal) => {
+          const pct = goalProgress(goal)
+          const cat = getGoalCat(goal.category)
+          return (
+            <div key={goal.id}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm w-5">{cat.icon}</span>
+                <span className="text-xs font-semibold text-slate-700 flex-1 truncate">{goal.title}</span>
+                <span className="text-[10px] font-bold" style={{ color: goal.color }}>{pct}%</span>
+              </div>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: goal.color }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function DashboardView() {
   const [data, setData] = useState(null)
@@ -383,6 +501,8 @@ export default function DashboardView() {
     const planos = loadPlanos()
     const treinoPlano = getTodayPlano(planos)
     const treinoLogs = loadLogs()
+    const provas = loadProvas()
+    const goals = loadGoals()
 
     // Score do dia
     const { pct: blockPct } = plan ? calcProgress(plan.blocks, plan.completed) : { pct: 0 }
@@ -407,7 +527,7 @@ export default function DashboardView() {
       }
     })
 
-    setData({ plan, materias, studyBlocks, transactions, projetos, tasks, habits, habitLogs, treinoPlano, treinoLogs, score, weekDays })
+    setData({ plan, materias, studyBlocks, transactions, projetos, tasks, habits, habitLogs, treinoPlano, treinoLogs, score, weekDays, provas, goals })
   }, [])
 
   if (!data) {
@@ -418,7 +538,7 @@ export default function DashboardView() {
     )
   }
 
-  const { plan, materias, studyBlocks, transactions, projetos, tasks, habits, habitLogs, treinoPlano, treinoLogs, score, weekDays } = data
+  const { plan, materias, studyBlocks, transactions, projetos, tasks, habits, habitLogs, treinoPlano, treinoLogs, score, weekDays, provas, goals } = data
   const dk = dateKey(new Date())
   const { count, total, pct } = plan ? calcProgress(plan.blocks, plan.completed) : { count: 0, total: 0, pct: 0 }
   const dueHabits = habits.filter(isHabitDueToday)
@@ -434,6 +554,9 @@ export default function DashboardView() {
         <p className="text-slate-500 text-sm">{greeting}, Luis 👋</p>
         <h1 className="text-2xl font-extrabold text-slate-900">Dashboard</h1>
       </div>
+
+      {/* O que fazer agora */}
+      <AgendaAgora plan={plan} />
 
       {/* Score + resumo do dia */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-4">
@@ -476,6 +599,12 @@ export default function DashboardView() {
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
         <WeekStrip weekDays={weekDays} />
       </div>
+
+      {/* Próximas provas */}
+      <ProvasWidget provas={provas} materias={materias} />
+
+      {/* Metas */}
+      <MetasWidget goals={goals} />
 
       {/* Habit streaks */}
       <div className="mb-4">
